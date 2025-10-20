@@ -1,6 +1,6 @@
 package com.ettdata.account_service.infrastructure.utils;
 
-public class BanjAccountConstants {
+public class BankAccountConstants {
     public static final int HTTP_OK = 200;
     public static final int HTTP_BAD_REQUEST = 400;
     public static final int HTTP_INTERNAL_ERROR = 500;
@@ -10,4 +10,8 @@ public class BanjAccountConstants {
     public static final String ACCOUNT_TYPE_NOT_ALLOWED = "Account type not allowed for this customer type";
     public static final String ACCOUNT_MIN_BALANCE_ERROR = "Initial balance below minimum opening amount";
     public static final String CUSTOMER_NOT_FOUND = "Customer not found";
+
+    public static final String BANK_ACCOUNT_NOT_FOUND = "Bank account not found";
+    public static final String CUSTOMER_DELETED = "Customer deleted successfully";
+
 }

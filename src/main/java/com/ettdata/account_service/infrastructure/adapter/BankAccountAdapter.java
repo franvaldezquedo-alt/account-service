@@ -32,7 +32,7 @@ public class BankAccountAdapter implements BankAccountRepositoryOutputPort {
         BankAccountEntity entity = BankAccountUtils.convertDomainToEntity(bankAccount);
 
         return bankAccountRepository.save(entity)
-                .map(savedEntity -> BankAccountUtils.convertEntityToDomain(savedEntity))
+                .map(BankAccountUtils::convertEntityToDomain)
                 .doOnSuccess(saved ->
                         log.info("Cuenta bancaria guardada exitosamente con ID: {}", saved.getId()));
     }
@@ -49,5 +49,10 @@ public class BankAccountAdapter implements BankAccountRepositoryOutputPort {
                 .doOnComplete(() -> log.info("Búsqueda de cuentas del cliente {} completada", customerId))
                 .doOnError(error -> log.error("Error al buscar cuentas del cliente {}: {}",
                         customerId, error.getMessage()));
+    }
+
+    @Override
+    public Mono<Void> deleteByIdBankAccount(String id) {
+        return bankAccountRepository.deleteById(id);
     }
 }

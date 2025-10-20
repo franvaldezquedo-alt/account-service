@@ -34,4 +34,6 @@ public class BankAccount {
     private AccountStatus accountStatus;
 
     private List<Transaction> transactionList;
+
+    private Boolean status;
 }

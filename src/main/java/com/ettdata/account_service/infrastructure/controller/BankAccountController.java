@@ -26,6 +26,12 @@ public class BankAccountController {
                 .doOnError(err -> log.error("Error al obtener lista de cuentas bancarias: {}", err.getMessage()));
     }
 
+    @GetMapping("/{id}")
+    Mono<BankAccountListResponse> getBankAccountById(@PathVariable String id) {
+        return bankAccountInputPort.findByIdBankAccount(id)
+                .doOnSuccess(res -> log.info("Respuesta cuenta bancaria por ID: {}", res));
+    }
+
     @PostMapping("/save")
     Mono<BankAccountResponse> saveBankAccount(@RequestBody BankAccountRequest request) {
         return bankAccountInputPort.createBankAccount(request)
@@ -33,5 +39,9 @@ public class BankAccountController {
                 .doOnError(err -> log.error("Error al crear cuenta bancaria: {}", err.getMessage()));
     }
 
+    @DeleteMapping("/delete/{id}")
+    Mono<BankAccountResponse> deleteBankAccount(@PathVariable String id) {
+        return bankAccountInputPort.deleteByIdBankAccount(id);
+    }
 
 }

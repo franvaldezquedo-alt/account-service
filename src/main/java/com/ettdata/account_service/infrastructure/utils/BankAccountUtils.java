@@ -30,13 +30,13 @@ public class BankAccountUtils {
 
     /** Crea respuesta exitosa */
     public static BankAccountResponse convertEntityToResponse(BankAccount account) {
-        return createSuccessResponse(BanjAccountConstants.ACCOUNT_CREATED, account.getId());
+        return createSuccessResponse(BankAccountConstants.ACCOUNT_CREATED, account.getId());
     }
 
     /** Crea respuesta de éxito genérica */
     private static BankAccountResponse createSuccessResponse(String message, String entityId) {
         return BankAccountResponse.builder()
-                .codResponse(BanjAccountConstants.HTTP_OK)
+                .codResponse(BankAccountConstants.HTTP_OK)
                 .messageResponse(message)
                 .codEntity(entityId)
                 .build();
@@ -102,6 +102,21 @@ public class BankAccountUtils {
                 .Error(null)
                 .build();
 
+    }
+
+    public static BankAccountListResponse ConvertBackAccountSingletonResponse(BankAccountEntity bankAccount){
+       return BankAccountListResponse.builder()
+                .data(List.of(convertEntityToDomain(bankAccount)))
+                .Error(null)
+                .build();
+
+    }
+
+    /**
+     * Crea respuesta para operación de eliminación
+     */
+    public static BankAccountResponse convertBankAccountResponseDelete(String bankAccountId) {
+        return createSuccessResponse(BankAccountConstants.CUSTOMER_DELETED, bankAccountId);
     }
 
 

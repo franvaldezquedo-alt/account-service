@@ -12,4 +12,5 @@ public interface BankAccountRepositoryOutputPort {
     Mono<BankAccount> saveBankAccount(BankAccount bankAccount);
     Mono<BankAccountEntity> findByIdBankAccount(String id);
     Flux<BankAccountEntity> findByCustomerId(String customerId);
+    Mono<Void> deleteByIdBankAccount(String id);
 }
