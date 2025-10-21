@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @NoArgsConstructor
-public class BankAccountRequest {
+public class AccountRequest {
     @NotBlank(message = "Customer document is required")
     private String customerDocument;
 

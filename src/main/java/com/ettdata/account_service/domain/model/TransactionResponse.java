@@ -5,13 +5,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BankAccountListResponse {
-    private List<BankAccount> data;
-    private String Error;
+public class TransactionResponse {
+    private Integer codResponse;
+    private String messageResponse;
+    private String codEntity;
+
 }

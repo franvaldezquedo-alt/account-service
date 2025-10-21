@@ -1,18 +1,18 @@
 package com.ettdata.account_service.infrastructure.utils;
 
 import com.ettdata.account_service.domain.model.*;
-import com.ettdata.account_service.infrastructure.entity.BankAccountEntity;
-import com.ettdata.account_service.infrastructure.model.BankAccountRequest;
+import com.ettdata.account_service.infrastructure.entity.AccountEntity;
+import com.ettdata.account_service.infrastructure.model.AccountRequest;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class BankAccountUtils {
+public class AccountUtils {
 
-    public static BankAccount convertRequestToEntity(BankAccountRequest request, String customerId) {
-        return BankAccount.builder()
+    public static Account convertRequestToEntity(AccountRequest request, String customerId) {
+        return Account.builder()
                 .accountNumber("ACC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .accountType(AccountType.valueOf(request.getAccountType()))
                 .customerId(customerId)
@@ -29,22 +29,22 @@ public class BankAccountUtils {
     }
 
     /** Crea respuesta exitosa */
-    public static BankAccountResponse convertEntityToResponse(BankAccount account) {
-        return createSuccessResponse(BankAccountConstants.ACCOUNT_CREATED, account.getId());
+    public static AccountResponse convertEntityToResponse(Account account) {
+        return createSuccessResponse(AccountConstants.ACCOUNT_CREATED, account.getId());
     }
 
     /** Crea respuesta de éxito genérica */
-    private static BankAccountResponse createSuccessResponse(String message, String entityId) {
-        return BankAccountResponse.builder()
-                .codResponse(BankAccountConstants.HTTP_OK)
+    private static AccountResponse createSuccessResponse(String message, String entityId) {
+        return AccountResponse.builder()
+                .codResponse(AccountConstants.HTTP_OK)
                 .messageResponse(message)
                 .codEntity(entityId)
                 .build();
     }
 
     /** Crea respuesta de error genérica */
-    public static BankAccountResponse createErrorResponse(int code, String message) {
-        return BankAccountResponse.builder()
+    public static AccountResponse createErrorResponse(int code, String message) {
+        return AccountResponse.builder()
                 .codResponse(code)
                 .messageResponse(message)
                 .codEntity(null)
@@ -52,10 +52,10 @@ public class BankAccountUtils {
     }
 
 
-    public static BankAccountEntity convertDomainToEntity(BankAccount domain) {
+    public static AccountEntity convertDomainToEntity(Account domain) {
         if (domain == null) return null;
 
-        return BankAccountEntity.builder()
+        return AccountEntity.builder()
                 .id(domain.getId())
                 .accountNumber(domain.getAccountNumber())
                 .accountType(domain.getAccountType())
@@ -72,10 +72,10 @@ public class BankAccountUtils {
                 .build();
     }
 
-    public static BankAccount convertEntityToDomain(BankAccountEntity entity) {
+    public static Account convertEntityToDomain(AccountEntity entity) {
         if (entity == null) return null;
 
-        return BankAccount.builder()
+        return Account.builder()
                 .id(entity.getId())
                 .accountNumber(entity.getAccountNumber())
                 .accountType(entity.getAccountType())
@@ -92,20 +92,20 @@ public class BankAccountUtils {
                 .build();
     }
 
-    public static BankAccountListResponse converBankAccountListResponse(List<BankAccountEntity> entities) {
-        List<BankAccount> accounts = new ArrayList<>();
-        for (BankAccountEntity entity : entities) {
+    public static AccountListResponse converBankAccountListResponse(List<AccountEntity> entities) {
+        List<Account> accounts = new ArrayList<>();
+        for (AccountEntity entity : entities) {
             accounts.add(convertEntityToDomain(entity));
         }
-        return BankAccountListResponse.builder()
+        return AccountListResponse.builder()
                 .data(accounts)
                 .Error(null)
                 .build();
 
     }
 
-    public static BankAccountListResponse ConvertBackAccountSingletonResponse(BankAccountEntity bankAccount){
-       return BankAccountListResponse.builder()
+    public static AccountListResponse ConvertBackAccountSingletonResponse(AccountEntity bankAccount){
+       return AccountListResponse.builder()
                 .data(List.of(convertEntityToDomain(bankAccount)))
                 .Error(null)
                 .build();
@@ -115,8 +115,8 @@ public class BankAccountUtils {
     /**
      * Crea respuesta para operación de eliminación
      */
-    public static BankAccountResponse convertBankAccountResponseDelete(String bankAccountId) {
-        return createSuccessResponse(BankAccountConstants.CUSTOMER_DELETED, bankAccountId);
+    public static AccountResponse convertBankAccountResponseDelete(String bankAccountId) {
+        return createSuccessResponse(AccountConstants.CUSTOMER_DELETED, bankAccountId);
     }
 
 

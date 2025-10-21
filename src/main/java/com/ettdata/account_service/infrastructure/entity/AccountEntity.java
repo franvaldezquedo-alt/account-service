@@ -19,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BankAccountEntity {
+public class AccountEntity {
     @Id
     private String id;
 

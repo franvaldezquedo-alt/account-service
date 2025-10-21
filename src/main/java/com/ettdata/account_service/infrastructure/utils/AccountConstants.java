@@ -1,6 +1,6 @@
 package com.ettdata.account_service.infrastructure.utils;
 
-public class BankAccountConstants {
+public class AccountConstants {
     public static final int HTTP_OK = 200;
     public static final int HTTP_BAD_REQUEST = 400;
     public static final int HTTP_INTERNAL_ERROR = 500;

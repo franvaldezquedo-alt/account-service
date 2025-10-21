@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BankAccount {
+public class Account {
 
     private String id;
 
@@ -35,5 +35,4 @@ public class BankAccount {
 
     private List<Transaction> transactionList;
 
-    private Boolean status;
 }
