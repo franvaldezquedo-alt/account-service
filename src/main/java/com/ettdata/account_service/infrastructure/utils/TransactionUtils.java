@@ -6,10 +6,13 @@ import com.ettdata.account_service.domain.model.TransactionResponse;
 import com.ettdata.account_service.domain.model.TransactionType;
 import com.ettdata.account_service.infrastructure.entity.TransactionEntity;
 import com.ettdata.account_service.infrastructure.model.DepositRequest;
+import com.ettdata.account_service.infrastructure.model.TransferRequest;
+import com.ettdata.account_service.infrastructure.model.WithdrawalRequest;
 
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class TransactionUtils {
@@ -101,5 +104,42 @@ public class TransactionUtils {
                 .codEntity(null)
                 .build();
     }
+
+
+
+  public static Transaction createTransferOutTransaction(TransferRequest request) {
+    return Transaction.builder()
+          .transactionId(UUID.randomUUID().toString())
+          .accountNumber(request.getSourceNumberAccount())
+          .amount(request.getAmount().negate()) // salida
+          .transactionType(TransactionType.TRANSFER)
+          .description(request.getDescription() != null ? request.getDescription() : "Transfer to " + request.getTargetNumberAccount())
+          .transactionDate(LocalDateTime.now())
+          .build();
+  }
+
+  public static Transaction createTransferInTransaction(TransferRequest request) {
+    return Transaction.builder()
+          .transactionId(UUID.randomUUID().toString())
+          .accountNumber(request.getTargetNumberAccount())
+          .amount(request.getAmount()) // entrada
+          .transactionType(TransactionType.TRANSFER)
+          .description(request.getDescription() != null ? request.getDescription() : "Transfer from " + request.getSourceNumberAccount())
+          .transactionDate(LocalDateTime.now())
+          .build();
+  }
+
+  public static Transaction createWithdrawalTransaction(WithdrawalRequest request) {
+    return Transaction.builder()
+          .transactionId(UUID.randomUUID().toString())
+          .accountNumber(request.getNumberAccount())
+          .amount(request.getAmount().negate()) // negativo porque es un retiro
+          .transactionType(TransactionType.WITHDRAWAL)
+          .description(request.getDescription() != null ? request.getDescription() : "Withdrawal")
+          .transactionDate(LocalDateTime.now())
+          .build();
+  }
+
+
 
 }
