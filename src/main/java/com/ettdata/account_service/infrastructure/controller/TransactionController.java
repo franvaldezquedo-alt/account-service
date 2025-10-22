@@ -21,7 +21,7 @@ public class TransactionController {
         this.transactionInputService = transactionInputService;
     }
 
-    @PostMapping("/save")
+    @PostMapping("/deposit")
     Mono<TransactionResponse> deposit(@Valid  @RequestBody  DepositRequest depositRequest) {
         return transactionInputService.deposit(depositRequest);
     }

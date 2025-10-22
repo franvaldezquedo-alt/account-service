@@ -4,170 +4,159 @@ import com.ettdata.account_service.application.port.in.AccountInputPort;
 import com.ettdata.account_service.application.port.out.AccountRepositoryOutputPort;
 import com.ettdata.account_service.application.port.out.CustomerOutputPort;
 import com.ettdata.account_service.domain.error.AccountNotFoundException;
+import com.ettdata.account_service.domain.model.Account;
 import com.ettdata.account_service.domain.model.AccountListResponse;
 import com.ettdata.account_service.domain.model.AccountResponse;
 import com.ettdata.account_service.infrastructure.model.AccountRequest;
 import com.ettdata.account_service.infrastructure.utils.AccountConstants;
-import com.ettdata.account_service.infrastructure.utils.AccountUtils;
+import com.ettdata.account_service.infrastructure.utils.AccountMapper;
+import com.ettdata.account_service.infrastructure.utils.AccountResponseMapper;
+import com.ettdata.account_service.infrastructure.utils.AccountValidator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import java.util.List;
 
 /**
- * Servicio de aplicación para la gestión de cuentas bancarias.
- * Implementa las reglas de negocio definidas para el sistema bancario.
+ * Service for bank account management.
+ * Implements business rules defined for the banking system.
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class AccountService implements AccountInputPort {
 
-    private final AccountRepositoryOutputPort accountRepositoryOutputPort;
-    private final CustomerOutputPort customerClientPort;
+  private final AccountRepositoryOutputPort accountRepository;
+  private final CustomerOutputPort customerClient;
+  private final AccountMapper accountMapper;
+  private final AccountResponseMapper responseMapper;
+  private final AccountValidator validator;
 
-    public AccountService(AccountRepositoryOutputPort accountRepositoryOutputPort,
-                          CustomerOutputPort customerClientPort) {
-        this.accountRepositoryOutputPort = accountRepositoryOutputPort;
-        this.customerClientPort = customerClientPort;
+  @Override
+  public Mono<AccountListResponse> findAllBankAccount() {
+    log.info("Retrieving all bank accounts");
+
+    return accountRepository.findAllBankAccount()
+          .collectList()
+          .map(responseMapper::toAccountListResponse)
+          .doOnSuccess(response ->
+                log.debug("Found {} accounts", response.getData().size()))
+          .doOnError(error ->
+                log.error("Error retrieving accounts: {}", error.getMessage()));
+  }
+
+  @Override
+  public Mono<AccountListResponse> findByIdBankAccount(String id) {
+    log.info("Retrieving account by id: {}", id);
+
+    return accountRepository.findByIdBankAccount(id)
+          .map(responseMapper::entityToSingletonResponse)
+          .switchIfEmpty(Mono.defer(() -> {
+            log.warn("Account not found with id: {}", id);
+            return Mono.error(new AccountNotFoundException(
+                  AccountConstants.BANK_ACCOUNT_NOT_FOUND + id));
+          }))
+          .doOnSuccess(response -> log.debug("Account found with id: {}", id))
+          .doOnError(error ->
+                log.error("Error retrieving account {}: {}", id, error.getMessage()));
+  }
+
+  @Override
+  public Mono<AccountResponse> createBankAccount(AccountRequest request) {
+    log.info("Starting account creation for document: {}", request.getCustomerDocument());
+
+    return customerClient.getCustomerByDocument(request.getCustomerDocument())
+          .flatMap(customer -> {
+            log.info("Customer found - Type: {}, ID: {}",
+                  customer.getCustomerType(), customer.getId());
+
+            return validateAccountCreation(request, customer.getCustomerType())
+                  .then(accountRepository.findByCustomerId(customer.getId()).collectList())
+                  .flatMap(existingAccounts ->
+                        processAccountCreation(request, customer.getId(),
+                              customer.getCustomerType(), existingAccounts));
+          })
+          .switchIfEmpty(Mono.defer(() -> {
+            log.warn("Customer not found with document: {}", request.getCustomerDocument());
+            return Mono.just(responseMapper.toErrorResponse(
+                  AccountConstants.HTTP_BAD_REQUEST,
+                  AccountConstants.CUSTOMER_NOT_FOUND));
+          }))
+          .onErrorResume(this::handleError);
+  }
+
+  @Override
+  public Mono<AccountResponse> deleteByIdBankAccount(String id) {
+    log.info("Deleting account with id: {}", id);
+
+    return accountRepository.deleteByIdBankAccount(id)
+          .then(Mono.fromCallable(() -> responseMapper.toDeleteResponse(id)))
+          .doOnSuccess(response ->
+                log.info("Account deleted successfully with id: {}", id))
+          .doOnError(error ->
+                log.error("Error deleting account {}: {}", id, error.getMessage()));
+  }
+
+  // ===== Private Helper Methods =====
+
+  private Mono<Void> validateAccountCreation(AccountRequest request, String customerType) {
+    return validator.validateMinimumBalance(
+                request.getInitialBalance(),
+                request.getMinimumOpeningAmount())
+          .then(validator.validateAccountType(
+                customerType,
+                request.getAccountType()));
+  }
+
+  private Mono<AccountResponse> processAccountCreation(AccountRequest request,
+                                                       String customerId,
+                                                       String customerType,
+                                                       List<Account> existingAccounts) {
+
+    return validator.validatePersonalAccountLimit(
+                customerType,
+                existingAccounts,
+                request.getAccountType())
+          .then(Mono.defer(() -> {
+            validator.logSpecialCustomerRequirements(customerType, request.getAccountType());
+            return createAndSaveAccount(request, customerId);
+          }));
+  }
+
+  private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
+    return Mono.just(request)
+          .map(req -> accountMapper.requestToDomain(req, customerId))
+          .flatMap(accountRepository::saveAccount)
+          .map(responseMapper::entityToSuccessResponse)
+          .doOnSuccess(response ->
+                log.info("Account created successfully - ID: {}, Type: {}",
+                      response.getCodEntity(), request.getAccountType()));
+  }
+
+  private Mono<AccountResponse> handleError(Throwable ex) {
+    log.error("Unexpected error in account operation: {}", ex.getMessage(), ex);
+
+    if (ex instanceof IllegalArgumentException) {
+      return Mono.just(responseMapper.toErrorResponse(
+            AccountConstants.HTTP_BAD_REQUEST,
+            ex.getMessage()));
     }
 
-    @Override
-    public Mono<AccountListResponse> findAllBankAccount() {
-        return accountRepositoryOutputPort.findAllBankAccount()
-                .collectList()
-                .map(AccountUtils::converBankAccountListResponse)
-                .doOnSuccess(res -> log.debug("se encontraron las {} cuentas",
-                        res.getData() != null ? res.getData().size() : 0))
-                .doOnError(error-> log.error("error al consultar cuentas"));
+    if (ex instanceof IllegalStateException) {
+      return Mono.just(responseMapper.toErrorResponse(
+            AccountConstants.HTTP_BAD_REQUEST,
+            ex.getMessage()));
     }
 
-    /**
-     * Crea una nueva cuenta bancaria aplicando validaciones de negocio.
-     *
-     * @param request datos de la cuenta a crear
-     * @return respuesta con código, mensaje y ID de la cuenta creada
-     */
-    @Override
-    public Mono<AccountResponse> createBankAccount(AccountRequest request) {
-        log.info("Iniciando creación de cuenta bancaria para documento: {}", request.getCustomerDocument());
-
-        return customerClientPort.getCustomerByDocument(request.getCustomerDocument())
-                .flatMap(customer -> {
-                    log.info("Cliente encontrado - Tipo: {}, ID: {}", customer.getCustomerType(), customer.getId());
-
-                    // Validar monto inicial mínimo de apertura
-                    if (request.getInitialBalance().compareTo(request.getMinimumOpeningAmount()) < 0) {
-                        log.warn("Saldo inicial ({}) menor al mínimo requerido ({})",
-                                request.getInitialBalance(), request.getMinimumOpeningAmount());
-                        return Mono.just(AccountUtils.createErrorResponse(
-                                AccountConstants.HTTP_BAD_REQUEST,
-                                AccountConstants.ACCOUNT_MIN_BALANCE_ERROR));
-                    }
-
-                    // Validar tipo de cuenta permitido según tipo de cliente
-                    if (!isAccountTypeAllowed(customer.getCustomerType(), request.getAccountType())) {
-                        log.warn("Tipo de cuenta '{}' no permitido para cliente tipo '{}'",
-                                request.getAccountType(), customer.getCustomerType());
-                        return Mono.just(AccountUtils.createErrorResponse(
-                                AccountConstants.HTTP_BAD_REQUEST,
-                                AccountConstants.ACCOUNT_TYPE_NOT_ALLOWED));
-                    }
-
-                    // Validar límite de cuentas por cliente
-                    return accountRepositoryOutputPort.findByCustomerId(customer.getId())
-                            .collectList()
-                            .flatMap(existingAccounts -> {
-
-                                // Validación: cliente PERSONAL solo puede tener una de cada tipo
-                                if ("PERSONAL".equalsIgnoreCase(customer.getCustomerType())) {
-                                    boolean hasAccountOfType = existingAccounts.stream()
-                                            .anyMatch(acc -> acc.getAccountType().name()
-                                                    .equalsIgnoreCase(request.getAccountType()));
-
-                                    if (hasAccountOfType) {
-                                        log.warn("Cliente PERSONAL ya tiene una cuenta del tipo '{}'",
-                                                request.getAccountType());
-                                        return Mono.just(AccountUtils.createErrorResponse(
-                                                AccountConstants.HTTP_BAD_REQUEST,
-                                                AccountConstants.ACCOUNT_ALREADY_EXISTS));
-                                    }
-                                }
-
-                                // Validación extra: clientes VIP y PYME (por implementar tarjetas)
-                                if ("VIP".equalsIgnoreCase(customer.getCustomerType())
-                                        && "SAVINGS".equalsIgnoreCase(request.getAccountType())) {
-                                    log.info("Cliente VIP solicitando cuenta de ahorro - validar requisito de tarjeta");
-                                }
-
-                                if ("PYME".equalsIgnoreCase(customer.getCustomerType())
-                                        && "CURRENT".equalsIgnoreCase(request.getAccountType())) {
-                                    log.info("Cliente PYME solicitando cuenta corriente - validar beneficio sin comisión");
-                                }
-
-                                // Crear y guardar cuenta
-                                return Mono.just(request)
-                                        .map(req -> AccountUtils.convertRequestToEntity(req, customer.getId()))
-                                        .flatMap(accountRepositoryOutputPort::saveAccount)
-                                        .map(AccountUtils::convertEntityToResponse)
-                                        .doOnSuccess(res -> log.info("Cuenta creada exitosamente - ID: {}, Tipo: {}",
-                                                res.getCodEntity(), request.getAccountType()));
-                            });
-                })
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Cliente no encontrado con documento: {}", request.getCustomerDocument());
-                    return Mono.just(AccountUtils.createErrorResponse(
-                            AccountConstants.HTTP_BAD_REQUEST,
-                            AccountConstants.CUSTOMER_NOT_FOUND));
-                }))
-                .onErrorResume(ex -> {
-                    log.error("Error inesperado en creación de cuenta: {}", ex.getMessage(), ex);
-                    return Mono.just(AccountUtils.createErrorResponse(
-                            AccountConstants.HTTP_INTERNAL_ERROR,
-                            "Error al procesar la solicitud: " + ex.getMessage()));
-                });
+    if (ex instanceof AccountNotFoundException) {
+      return Mono.just(responseMapper.toErrorResponse(
+            AccountConstants.HTTP_NOT_FOUND,
+            ex.getMessage()));
     }
 
-    @Override
-    public Mono<AccountListResponse> findByIdBankAccount(String id) {
-        return accountRepositoryOutputPort.findByIdBankAccount(id)
-                .map(AccountUtils::ConvertBackAccountSingletonResponse)
-                .doOnSuccess(res -> log.debug("Cuenta encontrada con id: {}", id))
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Cuenta no encontrada con id: {}", id);
-                    return Mono.error(new AccountNotFoundException(AccountConstants.BANK_ACCOUNT_NOT_FOUND + id));
-                }))
-                .doOnError(error -> log.error("Error al consultar cuenta con id {}: {}", id, error.getMessage()));
-    }
-
-    @Override
-    public Mono<AccountResponse> deleteByIdBankAccount(String id) {
-        return accountRepositoryOutputPort.deleteByIdBankAccount(id)
-                .then(Mono.fromCallable(() -> AccountUtils.convertBankAccountResponseDelete(id)))
-                .doOnSuccess(res -> log.info("Cuenta eliminada exitosamente con id: {}", id));
-    }
-
-    /**
-     * Valida si un tipo de cliente puede abrir un tipo específico de cuenta.
-     */
-    private boolean isAccountTypeAllowed(String customerType, String accountType) {
-        if (customerType == null || accountType == null) {
-            log.warn("Parámetros nulos en validación de tipo de cuenta");
-            return false;
-        }
-
-        String ct = customerType.toUpperCase();
-        String at = accountType.toUpperCase();
-
-        switch (ct) {
-            case "PERSONAL":
-                return at.equals("SAVINGS") || at.equals("CURRENT") || at.equals("FIXED_TERM");
-            case "BUSINESS":
-            case "PYME":
-                return at.equals("CURRENT");
-            case "VIP":
-                return at.equals("SAVINGS") || at.equals("CURRENT");
-            default:
-                log.warn("Tipo de cliente desconocido: {}", customerType);
-                return false;
-        }
-    }
+    return Mono.just(responseMapper.toErrorResponse(
+          AccountConstants.HTTP_INTERNAL_ERROR,
+          "Error processing request: " + ex.getMessage()));
+  }
 }

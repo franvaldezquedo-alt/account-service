@@ -27,6 +27,4 @@ public class Account {
     private Integer movementLimit;
     private BigDecimal minimumOpeningAmount;
     private AccountStatus accountStatus;
-    private List<Transaction> transactionList;
-
 }

@@ -14,4 +14,6 @@ public class AccountConstants {
     public static final String BANK_ACCOUNT_NOT_FOUND = "Bank account not found";
     public static final String CUSTOMER_DELETED = "Customer deleted successfully";
 
+    public static final int HTTP_NOT_FOUND = 404;
+
 }

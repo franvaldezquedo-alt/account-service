@@ -4,7 +4,7 @@ import com.ettdata.account_service.application.port.out.AccountRepositoryOutputP
 import com.ettdata.account_service.domain.model.Account;
 import com.ettdata.account_service.infrastructure.entity.AccountEntity;
 import com.ettdata.account_service.infrastructure.repository.AccountRepository;
-import com.ettdata.account_service.infrastructure.utils.AccountUtils;
+import com.ettdata.account_service.infrastructure.utils.AccountMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -15,43 +15,44 @@ import reactor.core.publisher.Mono;
 public class AccountAdapter implements AccountRepositoryOutputPort {
 
     private final AccountRepository accountRepository;
+    private final AccountMapper accountMapper;
 
-    public AccountAdapter(AccountRepository accountRepository) {
+    public AccountAdapter(AccountRepository accountRepository, AccountMapper accountMapper) {
         this.accountRepository = accountRepository;
+      this.accountMapper = accountMapper;
     }
 
     @Override
-    public Flux<AccountEntity> findAllBankAccount() {
-        return accountRepository.findAll();
+    public Flux<Account> findAllBankAccount() {
+        return accountRepository.findAll()
+              .map(accountMapper::toDomain);
     }
 
 
 
     @Override
-    public Mono<AccountEntity> saveAccount(AccountEntity account) {
-        log.debug("Persistiendo cuenta bancaria: {}", account);
-        return accountRepository.save(account)
-                .doOnSuccess(saved ->
-                        log.info("Cuenta bancaria guardada exitosamente con ID: {}", saved.getId()));
-    }
-
-
-    @Override
-    public Mono<AccountEntity> findByIdBankAccount(String id) {
-        return accountRepository.findByAccountNumber(id);
+    public Mono<Account> saveAccount(Account account) {
+      AccountEntity entity = accountMapper.toEntity(account);
+      return accountRepository.save(entity)
+            .map(accountMapper::toDomain);
     }
 
     @Override
-    public Flux<AccountEntity> findByCustomerId(String customerId) {
+    public Mono<Account> findByIdBankAccount(String id) {
+      return accountRepository.findByAccountNumber(id)
+            .map(accountMapper::toDomain);
+    }
+
+    @Override
+    public Flux<Account> findByCustomerId(String customerId) {
         log.info("Buscando cuentas bancarias del cliente: {}", customerId);
         return accountRepository.findByCustomerId(customerId)
-                .doOnComplete(() -> log.info("Búsqueda de cuentas del cliente {} completada", customerId))
-                .doOnError(error -> log.error("Error al buscar cuentas del cliente {}: {}",
-                        customerId, error.getMessage()));
+              .map(accountMapper::toDomain);
+
     }
 
     @Override
     public Mono<Void> deleteByIdBankAccount(String id) {
-        return accountRepository.deleteById(id);
+      return accountRepository.deleteById(id);
     }
 }

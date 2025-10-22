@@ -8,9 +8,9 @@ import reactor.core.publisher.Mono;
 
 @Repository
 public interface AccountRepositoryOutputPort {
-    Flux<AccountEntity> findAllBankAccount();
-    Mono<AccountEntity> saveAccount(AccountEntity account);
-    Mono<AccountEntity> findByIdBankAccount(String id);
-    Flux<AccountEntity> findByCustomerId(String customerId);
+    Flux<Account> findAllBankAccount();
+    Mono<Account> saveAccount(Account account);
+    Mono<Account> findByIdBankAccount(String id);
+    Flux<Account> findByCustomerId(String customerId);
     Mono<Void> deleteByIdBankAccount(String id);
 }

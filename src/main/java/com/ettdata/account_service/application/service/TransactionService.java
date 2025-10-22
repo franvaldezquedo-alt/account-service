@@ -3,13 +3,17 @@ package com.ettdata.account_service.application.service;
 import com.ettdata.account_service.application.port.in.TransactionInputPort;
 import com.ettdata.account_service.application.port.out.AccountRepositoryOutputPort;
 import com.ettdata.account_service.application.port.out.TransactionRepositoryOutputPort;
+import com.ettdata.account_service.domain.model.Account;
 import com.ettdata.account_service.domain.model.Transaction;
 import com.ettdata.account_service.domain.model.TransactionListResponse;
 import com.ettdata.account_service.domain.model.TransactionResponse;
 import com.ettdata.account_service.infrastructure.model.DepositRequest;
 import com.ettdata.account_service.infrastructure.model.TransferRequest;
 import com.ettdata.account_service.infrastructure.model.WithdrawalRequest;
-import com.ettdata.account_service.infrastructure.utils.TransactionUtils;
+import com.ettdata.account_service.infrastructure.utils.AccountMapper;
+import com.ettdata.account_service.infrastructure.utils.TransactionMapper;
+import com.ettdata.account_service.infrastructure.utils.TransactionValidator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
@@ -18,185 +22,155 @@ import java.math.BigDecimal;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class TransactionService implements TransactionInputPort {
 
-    private final AccountRepositoryOutputPort accountRepositoryOutputPort;
-    private final TransactionRepositoryOutputPort transactionRepositoryOutputPort;
+  private static final String ACCOUNT_NOT_FOUND = "Account not found";
+  private static final String ACCOUNT_NOT_ACTIVE = "Account is not active";
 
-    public TransactionService(AccountRepositoryOutputPort accountRepositoryOutputPort,
-                              TransactionRepositoryOutputPort transactionRepositoryOutputPort) {
-        this.accountRepositoryOutputPort = accountRepositoryOutputPort;
-        this.transactionRepositoryOutputPort = transactionRepositoryOutputPort;
-    }
-
-    @Override
-    public Mono<TransactionListResponse> getAllTransactionsByAccountNumber(String accountNumber) {
-        return transactionRepositoryOutputPort.findAllTransactionByAccountNumber(accountNumber)
-              .collectList()
-              .map(TransactionUtils::convertToTransactionListResponse)
-              .doOnSuccess(res -> log.debug("Se encontraron {} transacciones para la cuenta {}",
-                      res.getData() != null ? res.getData().size() : 0, accountNumber))
-              .doOnError(error -> log.error("Error al consultar transacciones para la cuenta {}: {}", accountNumber, error.getMessage()));
-    }
-
-    @Override
-    public Mono<TransactionResponse> deposit(DepositRequest depositRequest) {
-        log.info("Iniciando depósito en cuenta: {}", depositRequest.getNumberAccount());
-
-        if (depositRequest.getAmount() == null || depositRequest.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            return Mono.just(TransactionUtils.createErrorResponse(400, "Deposit amount must be greater than zero"));
-        }
-
-        return accountRepositoryOutputPort.findByIdBankAccount(depositRequest.getNumberAccount())
-                .flatMap(account -> {
-                    if (!"ACTIVE".equalsIgnoreCase(account.getAccountStatus().name())) {
-                        log.warn("Cuenta {} no está activa", account.getId());
-                        return Mono.just(TransactionUtils.createErrorResponse(400, "Account is not active"));
-                    }
-
-                    BigDecimal newBalance = account.getBalance().add(depositRequest.getAmount());
-                    account.setBalance(newBalance);
-
-                    Transaction transaction = TransactionUtils.convertDepositRequestToDomain(depositRequest);
-                    account.getTransactionList().add(transaction);
-
-                    return accountRepositoryOutputPort.saveAccount(account)
-                            .flatMap(savedAccount ->
-                                    transactionRepositoryOutputPort.saveTransaction(transaction)
-                                            .thenReturn(TransactionUtils.createSuccessResponse(
-                                                    "Deposit successful. New balance: " + savedAccount.getBalance(),
-                                                    transaction.getTransactionId()))
-                            );
-                })
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Cuenta no encontrada con número: {}", depositRequest.getNumberAccount());
-                    return Mono.just(TransactionUtils.createErrorResponse(404, "Account not found"));
-                }))
-                .onErrorResume(ex -> {
-                    log.error("Error durante el depósito: {}", ex.getMessage());
-                    return Mono.just(TransactionUtils.createErrorResponse(500, "Error processing deposit: " + ex.getMessage()));
-                });
-    }
+  private final AccountRepositoryOutputPort accountRepository;
+  private final TransactionRepositoryOutputPort transactionRepository;
+  private final TransactionValidator validator;
+  private final TransactionMapper transactionMapper;
+  private final AccountMapper accountMapper;
 
   @Override
-  public Mono<TransactionResponse> transfer(TransferRequest transferRequest) {
-    log.info("Iniciando transferencia de {} desde cuenta {} hacia cuenta {}",
-          transferRequest.getAmount(), transferRequest.getSourceNumberAccount(), transferRequest.getTargetNumberAccount());
+  public Mono<TransactionListResponse> getAllTransactionsByAccountNumber(String accountNumber) {
+    log.info("Retrieving transactions for account: {}", accountNumber);
 
-    if (transferRequest.getAmount() == null || transferRequest.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-      return Mono.just(TransactionUtils.createErrorResponse(400, "Transfer amount must be greater than zero"));
-    }
-
-    if (transferRequest.getSourceNumberAccount().equals(transferRequest.getTargetNumberAccount())) {
-      return Mono.just(TransactionUtils.createErrorResponse(400, "Source and target accounts must be different"));
-    }
-
-    return accountRepositoryOutputPort.findByIdBankAccount(transferRequest.getSourceNumberAccount())
-          .flatMap(sourceAccount -> {
-            if (!"ACTIVE".equalsIgnoreCase(sourceAccount.getAccountStatus().name())) {
-              log.warn("Cuenta origen {} no está activa", sourceAccount.getAccountNumber());
-              return Mono.just(TransactionUtils.createErrorResponse(400, "Source account is not active"));
-            }
-
-            if (sourceAccount.getBalance().compareTo(transferRequest.getAmount()) < 0) {
-              log.warn("Saldo insuficiente en cuenta {}", sourceAccount.getAccountNumber());
-              return Mono.just(TransactionUtils.createErrorResponse(400, "Insufficient funds"));
-            }
-
-            return accountRepositoryOutputPort.findByIdBankAccount(transferRequest.getTargetNumberAccount())
-                  .flatMap(targetAccount -> {
-                    if (!"ACTIVE".equalsIgnoreCase(targetAccount.getAccountStatus().name())) {
-                      log.warn("Cuenta destino {} no está activa", targetAccount.getAccountNumber());
-                      return Mono.just(TransactionUtils.createErrorResponse(400, "Target account is not active"));
-                    }
-
-                    // Actualizar saldos
-                    BigDecimal newSourceBalance = sourceAccount.getBalance().subtract(transferRequest.getAmount());
-                    BigDecimal newTargetBalance = targetAccount.getBalance().add(transferRequest.getAmount());
-
-                    sourceAccount.setBalance(newSourceBalance);
-                    targetAccount.setBalance(newTargetBalance);
-
-                    // Crear transacciones de salida y entrada
-                    Transaction outTransaction = TransactionUtils.createTransferOutTransaction(transferRequest);
-                    Transaction inTransaction = TransactionUtils.createTransferInTransaction(transferRequest);
-
-                    sourceAccount.getTransactionList().add(outTransaction);
-                    targetAccount.getTransactionList().add(inTransaction);
-
-                    // Guardar cambios
-                    return accountRepositoryOutputPort.saveAccount(sourceAccount)
-                          .then(accountRepositoryOutputPort.saveAccount(targetAccount))
-                          .then(transactionRepositoryOutputPort.saveTransaction(outTransaction))
-                          .then(transactionRepositoryOutputPort.saveTransaction(inTransaction))
-                          .thenReturn(TransactionUtils.createSuccessResponse(
-                                "Transfer successful. New source balance: " + newSourceBalance,
-                                outTransaction.getTransactionId()));
-                  })
-                  .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Cuenta destino no encontrada: {}", transferRequest.getTargetNumberAccount());
-                    return Mono.just(TransactionUtils.createErrorResponse(404, "Target account not found"));
-                  }));
-          })
-          .switchIfEmpty(Mono.defer(() -> {
-            log.warn("Cuenta origen no encontrada: {}", transferRequest.getSourceNumberAccount());
-            return Mono.just(TransactionUtils.createErrorResponse(404, "Source account not found"));
-          }))
-          .onErrorResume(ex -> {
-            log.error("Error durante la transferencia: {}", ex.getMessage());
-            return Mono.just(TransactionUtils.createErrorResponse(500, "Error processing transfer: " + ex.getMessage()));
-          });
+    return transactionRepository.findAllTransactionByAccountNumber(accountNumber)
+          .collectList()
+          .map(transactionMapper::toTransactionListResponse)
+          .doOnSuccess(response ->
+                log.debug("Found {} transactions for account {}",
+                      response.getData().size(), accountNumber))
+          .doOnError(error ->
+                log.error("Error retrieving transactions for account {}: {}",
+                      accountNumber, error.getMessage()));
   }
 
   @Override
-  public Mono<TransactionResponse> withdraw(WithdrawalRequest withdrawalRequest) {
-    log.info("Iniciando retiro en cuenta: {}", withdrawalRequest.getNumberAccount());
+  public Mono<TransactionResponse> deposit(DepositRequest request) {
+    log.info("Processing deposit for account: {}", request.getNumberAccount());
 
-    // 1. Validar monto
-    if (withdrawalRequest.getAmount() == null || withdrawalRequest.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-      return Mono.just(TransactionUtils.createErrorResponse(400, "Withdrawal amount must be greater than zero"));
-    }
+    return validator.validateAmount(request.getAmount())
+          .then(findActiveAccount(request.getNumberAccount()))
+          .flatMap(account -> processDeposit(account, request))
+          .onErrorResume(this::handleError);
+  }
 
-    // 2. Buscar cuenta
-    return accountRepositoryOutputPort.findByIdBankAccount(withdrawalRequest.getNumberAccount())
+  @Override
+  public Mono<TransactionResponse> withdraw(WithdrawalRequest request) {
+    log.info("Processing withdrawal for account: {}", request.getNumberAccount());
+
+    return validator.validateAmount(request.getAmount())
+          .then(findActiveAccount(request.getNumberAccount()))
+          .flatMap(account -> validator.validateSufficientFunds(account, request.getAmount())
+                .then(processWithdrawal(account, request)))
+          .onErrorResume(this::handleError);
+  }
+
+  @Override
+  public Mono<TransactionResponse> transfer(TransferRequest request) {
+    log.info("Processing transfer from {} to {} amount: {}",
+          request.getSourceNumberAccount(),
+          request.getTargetNumberAccount(),
+          request.getAmount());
+
+    return validator.validateAmount(request.getAmount())
+          .then(validator.validateDifferentAccounts(
+                request.getSourceNumberAccount(),
+                request.getTargetNumberAccount()))
+          .then(findActiveAccount(request.getSourceNumberAccount()))
+          .flatMap(sourceAccount ->
+                validator.validateSufficientFunds(sourceAccount, request.getAmount())
+                      .then(findActiveAccount(request.getTargetNumberAccount()))
+                      .flatMap(targetAccount ->
+                            processTransfer(sourceAccount, targetAccount, request)))
+          .onErrorResume(this::handleError);
+  }
+
+  // ===== Private Helper Methods =====
+
+  private Mono<Account> findActiveAccount(String accountNumber) {
+    return accountRepository.findByIdBankAccount(accountNumber)
+          .switchIfEmpty(Mono.error(new IllegalArgumentException(ACCOUNT_NOT_FOUND)))
           .flatMap(account -> {
-            // 3. Verificar estado
             if (!"ACTIVE".equalsIgnoreCase(account.getAccountStatus().name())) {
-              log.warn("Cuenta {} no está activa", account.getAccountNumber());
-              return Mono.just(TransactionUtils.createErrorResponse(400, "Account is not active"));
+              log.warn("Account {} is not active", accountNumber);
+              return Mono.error(new IllegalStateException(ACCOUNT_NOT_ACTIVE));
             }
-
-            // 4. Verificar saldo suficiente
-            if (account.getBalance().compareTo(withdrawalRequest.getAmount()) < 0) {
-              log.warn("Saldo insuficiente en cuenta {}", account.getAccountNumber());
-              return Mono.just(TransactionUtils.createErrorResponse(400, "Insufficient funds"));
-            }
-
-            // 5. Actualizar saldo
-            BigDecimal newBalance = account.getBalance().subtract(withdrawalRequest.getAmount());
-            account.setBalance(newBalance);
-
-            // 6. Crear transacción
-            Transaction transaction = TransactionUtils.createWithdrawalTransaction(withdrawalRequest);
-            account.getTransactionList().add(transaction);
-
-            // 7. Guardar cuenta y transacción
-            return accountRepositoryOutputPort.saveAccount(account)
-                  .flatMap(savedAccount ->
-                        transactionRepositoryOutputPort.saveTransaction(transaction)
-                              .thenReturn(TransactionUtils.createSuccessResponse(
-                                    "Withdrawal successful. New balance: " + savedAccount.getBalance(),
-                                    transaction.getTransactionId()))
-                  );
-          })
-          .switchIfEmpty(Mono.defer(() -> {
-            log.warn("Cuenta no encontrada: {}", withdrawalRequest.getNumberAccount());
-            return Mono.just(TransactionUtils.createErrorResponse(404, "Account not found"));
-          }))
-          .onErrorResume(ex -> {
-            log.error("Error durante el retiro: {}", ex.getMessage());
-            return Mono.just(TransactionUtils.createErrorResponse(500, "Error processing withdrawal: " + ex.getMessage()));
+            return Mono.just(account);
           });
   }
 
+  private Mono<TransactionResponse> processDeposit(Account account, DepositRequest request) {
+    BigDecimal newBalance = account.getBalance().add(request.getAmount());
+    account.setBalance(newBalance);
+
+    Transaction transaction = transactionMapper.toDepositTransaction(request);
+
+    log.info("Transaction created successfully: {}", transaction);
+
+
+    return saveAccountAndTransaction(account, transaction)
+          .map(savedAccount -> transactionMapper.toSuccessResponse(
+                "Deposit successful. New balance: " + savedAccount.getBalance(),
+                transaction.getTransactionId()));
+  }
+
+  private Mono<TransactionResponse> processWithdrawal(Account account, WithdrawalRequest request) {
+    BigDecimal newBalance = account.getBalance().subtract(request.getAmount());
+    account.setBalance(newBalance);
+
+    Transaction transaction = transactionMapper.toWithdrawalTransaction(request);
+
+    return saveAccountAndTransaction(account, transaction)
+          .map(savedAccount -> transactionMapper.toSuccessResponse(
+                "Withdrawal successful. New balance: " + savedAccount.getBalance(),
+                transaction.getTransactionId()));
+  }
+
+  private Mono<TransactionResponse> processTransfer(Account sourceAccount,
+                                                    Account targetAccount,
+                                                    TransferRequest request) {
+    // Update balances
+    sourceAccount.setBalance(sourceAccount.getBalance().subtract(request.getAmount()));
+    targetAccount.setBalance(targetAccount.getBalance().add(request.getAmount()));
+
+    // Create transactions
+    Transaction outTransaction = transactionMapper.toTransferOutTransaction(request);
+    Transaction inTransaction = transactionMapper.toTransferInTransaction(request);
+
+    // Save everything
+    return accountRepository.saveAccount(sourceAccount)
+          .then(accountRepository.saveAccount(targetAccount))
+          .then(transactionRepository.saveTransaction(outTransaction))
+          .then(transactionRepository.saveTransaction(inTransaction)
+          .thenReturn(transactionMapper.toSuccessResponse(
+                "Transfer successful. New balance: " + sourceAccount.getBalance(),
+                outTransaction.getTransactionId())));
+  }
+
+  private Mono<Account> saveAccountAndTransaction(Account account, Transaction transaction) {
+    return accountRepository.saveAccount(account)
+          .flatMap(savedAccount ->
+                transactionRepository.saveTransaction(transaction)
+                      .thenReturn(savedAccount));
+
+  }
+
+  private Mono<TransactionResponse> handleError(Throwable ex) {
+    log.error("Transaction processing error: {}", ex.getMessage(), ex);
+
+    if (ex instanceof IllegalArgumentException) {
+      return Mono.just(transactionMapper.toErrorResponse(404, ex.getMessage()));
+    }
+    if (ex instanceof IllegalStateException) {
+      return Mono.just(transactionMapper.toErrorResponse(400, ex.getMessage()));
+    }
+
+    return Mono.just(transactionMapper.toErrorResponse(500,
+          "Error processing transaction: " + ex.getMessage()));
+  }
 }

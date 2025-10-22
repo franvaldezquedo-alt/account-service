@@ -33,5 +33,4 @@ public class AccountEntity {
     private Integer movementLimit;               // Free transactions per month
     private BigDecimal minimumOpeningAmount;     // Minimum amount to open the account
     private AccountStatus accountStatus;         // ACTIVE, INACTIVE, BLOCKED
-    private List<Transaction> transactionList;   // Embedded list of movements
 }
