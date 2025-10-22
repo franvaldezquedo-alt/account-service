@@ -5,8 +5,8 @@ import com.ettdata.account_service.domain.model.TransactionResponse;
 import com.ettdata.account_service.infrastructure.model.DepositRequest;
 import reactor.core.publisher.Mono;
 
-public interface TransactionInputService {
+public interface TransactionInputPort {
 
-    Mono<TransactionListResponse> getTransactionsByAccountId(String accountId);
+    Mono<TransactionListResponse> getAllTransactionsByAccountNumber(String accountNumber);
     Mono<TransactionResponse> deposit(DepositRequest transactionResponse);
 }

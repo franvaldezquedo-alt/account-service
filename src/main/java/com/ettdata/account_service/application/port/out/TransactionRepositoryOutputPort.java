@@ -6,6 +6,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface TransactionRepositoryOutputPort {
-    Flux<TransactionEntity> findAllTransactionByAccountId(String accountId);
+    Flux<TransactionEntity> findAllTransactionByAccountNumber(String accountNumber);
     Mono<Transaction> saveTransaction(Transaction transaction);
 }

@@ -1,6 +1,6 @@
 package com.ettdata.account_service.application.service;
 
-import com.ettdata.account_service.application.port.in.TransactionInputService;
+import com.ettdata.account_service.application.port.in.TransactionInputPort;
 import com.ettdata.account_service.application.port.out.AccountRepositoryOutputPort;
 import com.ettdata.account_service.application.port.out.TransactionRepositoryOutputPort;
 import com.ettdata.account_service.domain.model.Transaction;
@@ -16,7 +16,7 @@ import java.math.BigDecimal;
 
 @Service
 @Slf4j
-public class TransactionService implements TransactionInputService {
+public class TransactionService implements TransactionInputPort {
 
     private final AccountRepositoryOutputPort accountRepositoryOutputPort;
     private final TransactionRepositoryOutputPort transactionRepositoryOutputPort;
@@ -28,8 +28,13 @@ public class TransactionService implements TransactionInputService {
     }
 
     @Override
-    public Mono<TransactionListResponse> getTransactionsByAccountId(String accountId) {
-        return null;
+    public Mono<TransactionListResponse> getAllTransactionsByAccountNumber(String accountNumber) {
+        return transactionRepositoryOutputPort.findAllTransactionByAccountNumber(accountNumber)
+              .collectList()
+              .map(TransactionUtils::convertToTransactionListResponse)
+              .doOnSuccess(res -> log.debug("Se encontraron {} transacciones para la cuenta {}",
+                      res.getData() != null ? res.getData().size() : 0, accountNumber))
+              .doOnError(error -> log.error("Error al consultar transacciones para la cuenta {}: {}", accountNumber, error.getMessage()));
     }
 
     @Override

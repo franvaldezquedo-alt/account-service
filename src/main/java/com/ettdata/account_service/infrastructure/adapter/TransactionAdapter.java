@@ -18,8 +18,8 @@ public class TransactionAdapter implements TransactionRepositoryOutputPort {
     }
 
     @Override
-    public Flux<TransactionEntity> findAllTransactionByAccountId(String accountId) {
-        return transactionRepository.findByAccountNumber(accountId);
+    public Flux<TransactionEntity> findAllTransactionByAccountNumber(String accountNumber) {
+        return transactionRepository.findAllTransactionByAccountNumber(accountNumber);
     }
 
     @Override

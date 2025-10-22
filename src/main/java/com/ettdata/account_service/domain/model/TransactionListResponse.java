@@ -12,6 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class TransactionListResponse {
-    private List<Account> data;
+    private List<Transaction> data;
     private String Error;
 }

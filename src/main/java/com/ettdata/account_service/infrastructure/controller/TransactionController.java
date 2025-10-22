@@ -1,6 +1,7 @@
 package com.ettdata.account_service.infrastructure.controller;
 
-import com.ettdata.account_service.application.port.in.TransactionInputService;
+import com.ettdata.account_service.application.port.in.TransactionInputPort;
+import com.ettdata.account_service.domain.model.TransactionListResponse;
 import com.ettdata.account_service.domain.model.TransactionResponse;
 import com.ettdata.account_service.infrastructure.model.DepositRequest;
 import org.springframework.web.bind.annotation.*;
@@ -12,14 +13,19 @@ import javax.validation.Valid;
 @RequestMapping("/api/transactions")
 public class TransactionController {
 
-    private final TransactionInputService transactionInputService;
+    private final TransactionInputPort transactionInputService;
 
-    public TransactionController(TransactionInputService transactionInputService) {
+    public TransactionController(TransactionInputPort transactionInputService) {
         this.transactionInputService = transactionInputService;
     }
 
     @PostMapping("/save")
     Mono<TransactionResponse> deposit(@Valid  @RequestBody  DepositRequest depositRequest) {
         return transactionInputService.deposit(depositRequest);
+    }
+
+    @GetMapping("/{accountNumber}")
+    Mono<TransactionListResponse> getAllTransactionsByAccountNumber(@PathVariable String accountNumber) {
+        return transactionInputService.getAllTransactionsByAccountNumber(accountNumber);
     }
 }
