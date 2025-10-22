@@ -106,7 +106,7 @@ public class AccountService implements AccountInputPort {
                                 // Crear y guardar cuenta
                                 return Mono.just(request)
                                         .map(req -> AccountUtils.convertRequestToEntity(req, customer.getId()))
-                                        .flatMap(accountRepositoryOutputPort::saveBankAccount)
+                                        .flatMap(accountRepositoryOutputPort::saveAccount)
                                         .map(AccountUtils::convertEntityToResponse)
                                         .doOnSuccess(res -> log.info("Cuenta creada exitosamente - ID: {}, Tipo: {}",
                                                 res.getCodEntity(), request.getAccountType()));

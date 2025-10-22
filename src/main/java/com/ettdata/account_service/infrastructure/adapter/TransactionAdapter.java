@@ -4,9 +4,11 @@ import com.ettdata.account_service.application.port.out.TransactionRepositoryOut
 import com.ettdata.account_service.domain.model.Transaction;
 import com.ettdata.account_service.infrastructure.entity.TransactionEntity;
 import com.ettdata.account_service.infrastructure.repository.TransactionRepository;
+import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+@Component
 public class TransactionAdapter implements TransactionRepositoryOutputPort {
 
     private final TransactionRepository transactionRepository;
@@ -17,7 +19,7 @@ public class TransactionAdapter implements TransactionRepositoryOutputPort {
 
     @Override
     public Flux<TransactionEntity> findAllTransactionByAccountId(String accountId) {
-        return transactionRepository.findByAccountId(accountId);
+        return transactionRepository.findByAccountNumber(accountId);
     }
 
     @Override

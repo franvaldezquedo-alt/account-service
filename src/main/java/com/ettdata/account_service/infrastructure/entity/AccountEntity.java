@@ -22,22 +22,16 @@ import java.util.List;
 public class AccountEntity {
     @Id
     private String id;
-
     private String accountNumber;                // Unique account number
     private AccountType accountType;             // SAVINGS, CURRENT, FIXED_TERM
-
     private String customerId;                   // Reference to the customer
     private List<String> holders;                // For business accounts
     private List<String> authorizedSigners;      // Authorized signers
-
     private LocalDate openingDate;               // Date of creation
     private BigDecimal balance;                  // Current balance
-
     private BigDecimal maintenanceFee;           // Monthly maintenance fee (if applicable)
     private Integer movementLimit;               // Free transactions per month
     private BigDecimal minimumOpeningAmount;     // Minimum amount to open the account
-
     private AccountStatus accountStatus;         // ACTIVE, INACTIVE, BLOCKED
-
     private List<Transaction> transactionList;   // Embedded list of movements
 }

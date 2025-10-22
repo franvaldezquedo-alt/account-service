@@ -16,6 +16,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 public class AccountRequest {
+
     @NotBlank(message = "Customer document is required")
     private String customerDocument;
 

@@ -16,23 +16,17 @@ import java.util.List;
 public class Account {
 
     private String id;
-
     private String accountNumber;
     private AccountType accountType;
-
     private String customerId; // Reference to the client
     private List<String> holders; // For business accounts
     private List<String> authorizedSigners;
-
     private LocalDate openingDate;
     private BigDecimal balance;
-
     private BigDecimal maintenanceFee;
     private Integer movementLimit;
     private BigDecimal minimumOpeningAmount;
-
     private AccountStatus accountStatus;
-
     private List<Transaction> transactionList;
 
 }

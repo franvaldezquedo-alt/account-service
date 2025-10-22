@@ -25,21 +25,20 @@ public class AccountAdapter implements AccountRepositoryOutputPort {
         return accountRepository.findAll();
     }
 
+
+
     @Override
-    public Mono<Account> saveBankAccount(Account account) {
+    public Mono<AccountEntity> saveAccount(AccountEntity account) {
         log.debug("Persistiendo cuenta bancaria: {}", account);
-
-        AccountEntity entity = AccountUtils.convertDomainToEntity(account);
-
-        return accountRepository.save(entity)
-                .map(AccountUtils::convertEntityToDomain)
+        return accountRepository.save(account)
                 .doOnSuccess(saved ->
                         log.info("Cuenta bancaria guardada exitosamente con ID: {}", saved.getId()));
     }
 
+
     @Override
     public Mono<AccountEntity> findByIdBankAccount(String id) {
-        return accountRepository.findById(id);
+        return accountRepository.findByAccountNumber(id);
     }
 
     @Override

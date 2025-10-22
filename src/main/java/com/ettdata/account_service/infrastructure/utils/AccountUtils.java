@@ -11,8 +11,8 @@ import java.util.UUID;
 
 public class AccountUtils {
 
-    public static Account convertRequestToEntity(AccountRequest request, String customerId) {
-        return Account.builder()
+    public static AccountEntity convertRequestToEntity(AccountRequest request, String customerId) {
+        return AccountEntity.builder()
                 .accountNumber("ACC-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
                 .accountType(AccountType.valueOf(request.getAccountType()))
                 .customerId(customerId)
@@ -29,7 +29,7 @@ public class AccountUtils {
     }
 
     /** Crea respuesta exitosa */
-    public static AccountResponse convertEntityToResponse(Account account) {
+    public static AccountResponse convertEntityToResponse(AccountEntity account) {
         return createSuccessResponse(AccountConstants.ACCOUNT_CREATED, account.getId());
     }
 
@@ -52,7 +52,7 @@ public class AccountUtils {
     }
 
 
-    public static AccountEntity convertDomainToEntity(Account domain) {
+    public static AccountEntity convertDomainToEntity(AccountEntity domain) {
         if (domain == null) return null;
 
         return AccountEntity.builder()

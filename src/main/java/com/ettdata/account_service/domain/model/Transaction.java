@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 @Builder
 public class Transaction {
     private String transactionId;
+    private String accountNumber;
     private LocalDateTime transactionDate;
     private TransactionType transactionType;
     private BigDecimal amount;
     private String description;
-    private String targetAccountNumber;
 }

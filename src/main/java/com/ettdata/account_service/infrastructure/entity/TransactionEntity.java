@@ -12,16 +12,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
-@Document(collection = "bank_transactions")
+@Document(collection = "transactions")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class TransactionEntity {
     @Id
     private String transactionId;
+    private String accountNumber;
     private LocalDateTime transactionDate;
     private TransactionType transactionType;
     private BigDecimal amount;
     private String description;
-    private String targetAccountNumber;
 }

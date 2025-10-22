@@ -32,6 +32,12 @@ public class AccountController {
                 .doOnSuccess(res -> log.info("Respuesta cuenta bancaria por ID: {}", res));
     }
 
+    @GetMapping("/account/{numberAccount}")
+    Mono<AccountListResponse> getBankAccountByNumberAccount(@PathVariable String numberAccount) {
+        return accountInputPort.findByIdBankAccount(numberAccount)
+                .doOnSuccess(res -> log.info("Respuesta cuenta bancaria por número de cuenta: {}", res));
+    }
+
     @PostMapping("/save")
     Mono<AccountResponse> saveBankAccount(@RequestBody AccountRequest request) {
         return accountInputPort.createBankAccount(request)
