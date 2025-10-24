@@ -24,7 +24,7 @@ public class Account {
     private LocalDate openingDate;
     private BigDecimal balance;
     private BigDecimal maintenanceFee;
-    private Integer movementLimit;
+    private Integer cantMovements;
     private BigDecimal minimumOpeningAmount;
     private AccountStatus accountStatus;
 }

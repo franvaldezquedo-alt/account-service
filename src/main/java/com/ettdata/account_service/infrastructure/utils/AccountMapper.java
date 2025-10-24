@@ -43,7 +43,7 @@ public class AccountMapper {
           .authorizedSigners(entity.getAuthorizedSigners())
           .openingDate(entity.getOpeningDate())
           .maintenanceFee(entity.getMaintenanceFee())
-          .movementLimit(entity.getMovementLimit())
+          .cantMovements(entity.getCantMovements())
           .minimumOpeningAmount(entity.getMinimumOpeningAmount())
           .build();
   }
@@ -70,7 +70,7 @@ public class AccountMapper {
           .authorizedSigners(domain.getAuthorizedSigners())
           .openingDate(domain.getOpeningDate())
           .maintenanceFee(domain.getMaintenanceFee())
-          .movementLimit(domain.getMovementLimit())
+          .cantMovements(domain.getCantMovements())
           .minimumOpeningAmount(domain.getMinimumOpeningAmount())
           .build();
   }
@@ -78,7 +78,7 @@ public class AccountMapper {
   // ===== Request to Entity =====
 
   /**
-   * Converts AccountRequest to AccountEntity with generated account number
+   * Converts AccountRequest to Account with generated account number
    */
   public Account requestToDomain(AccountRequest request, String customerId) {
     if (request == null) {
@@ -94,7 +94,7 @@ public class AccountMapper {
           .openingDate(LocalDate.now())
           .balance(request.getInitialBalance())
           .maintenanceFee(request.getMaintenanceFee())
-          .movementLimit(request.getMovementLimit())
+          .cantMovements(0)
           .minimumOpeningAmount(request.getMinimumOpeningAmount())
           .accountStatus(AccountStatus.ACTIVE)
           .build();

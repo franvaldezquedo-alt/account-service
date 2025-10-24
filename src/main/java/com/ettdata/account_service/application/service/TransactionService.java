@@ -55,7 +55,8 @@ public class TransactionService implements TransactionInputPort {
 
     return validator.validateAmount(request.getAmount())
           .then(findActiveAccount(request.getNumberAccount()))
-          .flatMap(account -> processDeposit(account, request))
+          .flatMap(account -> validator.validateMovementCount(account)
+                .then(processDeposit(account, request)))
           .onErrorResume(this::handleError);
   }
 
@@ -66,6 +67,7 @@ public class TransactionService implements TransactionInputPort {
     return validator.validateAmount(request.getAmount())
           .then(findActiveAccount(request.getNumberAccount()))
           .flatMap(account -> validator.validateSufficientFunds(account, request.getAmount())
+                .then(validator.validateMovementCount(account))
                 .then(processWithdrawal(account, request)))
           .onErrorResume(this::handleError);
   }
@@ -81,12 +83,19 @@ public class TransactionService implements TransactionInputPort {
           .then(validator.validateDifferentAccounts(
                 request.getSourceNumberAccount(),
                 request.getTargetNumberAccount()))
+          //  Buscar cuenta origen
           .then(findActiveAccount(request.getSourceNumberAccount()))
           .flatMap(sourceAccount ->
-                validator.validateSufficientFunds(sourceAccount, request.getAmount())
+                // Validar límite de movimientos y fondos
+                validator.validateMovementCount(sourceAccount)
+                      .then(validator.validateSufficientFunds(sourceAccount, request.getAmount()))
+                      //  Buscar cuenta destino
                       .then(findActiveAccount(request.getTargetNumberAccount()))
                       .flatMap(targetAccount ->
-                            processTransfer(sourceAccount, targetAccount, request)))
+                            //  Validar límite también en la cuenta destino
+                            validator.validateMovementCount(targetAccount)
+                                  //  Procesar la transferencia si ambas son válidas
+                                  .then(processTransfer(sourceAccount, targetAccount, request))))
           .onErrorResume(this::handleError);
   }
 
@@ -108,6 +117,10 @@ public class TransactionService implements TransactionInputPort {
     BigDecimal newBalance = account.getBalance().add(request.getAmount());
     account.setBalance(newBalance);
 
+    // Incrementar contador de movimientos
+    int newCount = (account.getCantMovements() == null ? 0 : account.getCantMovements()) + 1;
+    account.setCantMovements(newCount);
+
     Transaction transaction = transactionMapper.toDepositTransaction(request);
 
     log.info("Transaction created successfully: {}", transaction);
@@ -123,6 +136,10 @@ public class TransactionService implements TransactionInputPort {
     BigDecimal newBalance = account.getBalance().subtract(request.getAmount());
     account.setBalance(newBalance);
 
+    // Incrementar contador de movimientos
+    int newCount = (account.getCantMovements() == null ? 0 : account.getCantMovements()) + 1;
+    account.setCantMovements(newCount);
+
     Transaction transaction = transactionMapper.toWithdrawalTransaction(request);
 
     return saveAccountAndTransaction(account, transaction)
@@ -134,6 +151,15 @@ public class TransactionService implements TransactionInputPort {
   private Mono<TransactionResponse> processTransfer(Account sourceAccount,
                                                     Account targetAccount,
                                                     TransferRequest request) {
+
+    // Incrementar contador de movimientos
+    int newCount = (sourceAccount.getCantMovements() == null ? 0 : sourceAccount.getCantMovements()) + 1;
+    sourceAccount.setCantMovements(newCount);
+
+    // Incrementar contador de movimientos
+    int newCount1 = (targetAccount.getCantMovements() == null ? 0 : targetAccount.getCantMovements()) + 1;
+    targetAccount.setCantMovements(newCount1);
+
     // Update balances
     sourceAccount.setBalance(sourceAccount.getBalance().subtract(request.getAmount()));
     targetAccount.setBalance(targetAccount.getBalance().add(request.getAmount()));

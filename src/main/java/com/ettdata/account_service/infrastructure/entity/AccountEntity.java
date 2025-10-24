@@ -15,7 +15,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 @Data
-@Document(collection = "bank_accounts")
+@Document(collection = "accounts")
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -30,7 +30,7 @@ public class AccountEntity {
     private LocalDate openingDate;               // Date of creation
     private BigDecimal balance;                  // Current balance
     private BigDecimal maintenanceFee;           // Monthly maintenance fee (if applicable)
-    private Integer movementLimit;               // Free transactions per month
+    private Integer cantMovements;               // Free transactions per month
     private BigDecimal minimumOpeningAmount;     // Minimum amount to open the account
     private AccountStatus accountStatus;         // ACTIVE, INACTIVE, BLOCKED
 }

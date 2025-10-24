@@ -33,9 +33,6 @@ public class AccountRequest {
     @DecimalMin(value = "0.0", inclusive = true, message = "Maintenance fee must be zero or greater")
     private BigDecimal maintenanceFee;
 
-    @PositiveOrZero(message = "Movement limit must be zero or greater")
-    private Integer movementLimit;
-
     @DecimalMin(value = "0.0", inclusive = true, message = "Minimum opening amount must be zero or greater")
     private BigDecimal minimumOpeningAmount;
 }

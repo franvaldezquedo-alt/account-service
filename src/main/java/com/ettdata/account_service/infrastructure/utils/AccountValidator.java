@@ -9,14 +9,15 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Validator component for account business rules
+ * Componente validador para reglas de negocio de cuentas
  */
 @Component
 @Slf4j
 public class AccountValidator {
 
+
   /**
-   * Validates minimum opening balance
+   * Valida el saldo mínimo de apertura
    */
   public Mono<Void> validateMinimumBalance(BigDecimal initialBalance, BigDecimal minimumRequired) {
     if (initialBalance.compareTo(minimumRequired) < 0) {
@@ -29,7 +30,7 @@ public class AccountValidator {
   }
 
   /**
-   * Validates if account type is allowed for customer type
+   * Valída si el tipo de cuenta está permitido para el tipo de cliente
    */
   public Mono<Void> validateAccountType(String customerType, String accountType) {
     if (!isAccountTypeAllowed(customerType, accountType)) {
@@ -42,7 +43,7 @@ public class AccountValidator {
   }
 
   /**
-   * Validates account limit for PERSONAL customers
+   * Valída el límite de cuenta para clientes PERSONALES
    */
   public Mono<Void> validatePersonalAccountLimit(String customerType,
                                                  List<Account> existingAccounts,
@@ -66,7 +67,7 @@ public class AccountValidator {
   }
 
   /**
-   * Logs additional validations for VIP and PYME customers
+   * Registra validaciones adicionales para clientes VIP y PYME
    */
   public void logSpecialCustomerRequirements(String customerType, String accountType) {
     if ("VIP".equalsIgnoreCase(customerType)
@@ -83,7 +84,7 @@ public class AccountValidator {
   // ===== Private Helper Methods =====
 
   /**
-   * Determines if an account type is allowed for a customer type
+   * Determina si un tipo de cuenta está permitido para un tipo de cliente
    */
   private boolean isAccountTypeAllowed(String customerType, String accountType) {
     if (customerType == null || accountType == null) {

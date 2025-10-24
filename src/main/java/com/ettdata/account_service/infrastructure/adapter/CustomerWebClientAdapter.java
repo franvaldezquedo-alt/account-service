@@ -56,15 +56,15 @@ public class CustomerWebClientAdapter implements CustomerOutputPort {
                             return Mono.empty();
                         })
                 .onStatus(
-                        status -> status.is4xxClientError(),
+                      HttpStatus::is4xxClientError,
                         response -> {
                             log.error("Error del cliente (4xx) al consultar documento: {}", documentNumber);
                             return Mono.error(new RuntimeException("Error en la solicitud al servicio de clientes"));
                         })
                 .onStatus(
-                        status -> status.is5xxServerError(),
+                      HttpStatus::is5xxServerError,
                         response -> {
-                            log.error("Error del servidor (5xx) en el servicio de clientes");
+                            log.error("Error del servidor en el servicio de clientes");
                             return Mono.error(new RuntimeException("Servicio de clientes no disponible"));
                         })
                 .bodyToMono(CustomerApiResponse.class)

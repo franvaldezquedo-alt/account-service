@@ -28,8 +28,6 @@ public class AccountAdapter implements AccountRepositoryOutputPort {
               .map(accountMapper::toDomain);
     }
 
-
-
     @Override
     public Mono<Account> saveAccount(Account account) {
       AccountEntity entity = accountMapper.toEntity(account);
