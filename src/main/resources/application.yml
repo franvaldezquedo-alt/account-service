@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   kafka:
     bootstrap-servers: localhost:9092
@@ -7,7 +10,7 @@ spring:
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
       properties:
         schema.registry.url: http://localhost:8081
-        # opcional:
+        # Opcional para versionamiento Avro
         # value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicRecordNameStrategy
 
     consumer:
@@ -17,3 +20,8 @@ spring:
       properties:
         schema.registry.url: http://localhost:8081
         specific.avro.reader: true
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/bd-account
