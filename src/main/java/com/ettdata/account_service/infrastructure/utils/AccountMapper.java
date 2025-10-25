@@ -6,6 +6,7 @@ import com.ettdata.account_service.domain.model.AccountType;
 import com.ettdata.account_service.infrastructure.entity.AccountEntity;
 import com.ettdata.account_service.infrastructure.model.AccountRequest;
 import org.springframework.stereotype.Component;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -15,12 +16,6 @@ import java.util.UUID;
  */
 @Component
 public class AccountMapper {
-
-  private final TransactionMapper transactionMapper;
-
-  public AccountMapper(TransactionMapper transactionMapper) {
-    this.transactionMapper = transactionMapper;
-  }
 
   // ===== Entity to Domain =====
 

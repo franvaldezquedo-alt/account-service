@@ -2,7 +2,6 @@ package com.ettdata.account_service.infrastructure.entity;
 
 import com.ettdata.account_service.domain.model.AccountStatus;
 import com.ettdata.account_service.domain.model.AccountType;
-import com.ettdata.account_service.domain.model.Transaction;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
