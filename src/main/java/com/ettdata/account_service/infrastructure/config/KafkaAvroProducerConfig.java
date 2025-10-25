@@ -22,15 +22,20 @@ public class KafkaAvroProducerConfig {
     @Value("${spring.kafka.producer.properties.schema.registry.url}")
     private String schemaRegistryUrl;
 
-    @Bean
-    public ProducerFactory<String, SpecificRecord> producerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
-        props.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
-        return new DefaultKafkaProducerFactory<>(props);
-    }
+  @Bean
+  public ProducerFactory<String, SpecificRecord> producerFactory() {
+    Map<String, Object> props = new HashMap<>();
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, io.confluent.kafka.serializers.KafkaAvroSerializer.class);
+    props.put(AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+
+    // ✅ Evita que se agregue avro.java.string automáticamente
+    props.put("avro.use.logical.type.converters", false);
+    props.put("specific.avro.reader", true);
+
+    return new DefaultKafkaProducerFactory<>(props);
+  }
 
     @Bean
     public KafkaTemplate<String, SpecificRecord> kafkaTemplate() {

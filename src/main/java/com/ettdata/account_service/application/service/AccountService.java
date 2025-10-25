@@ -129,19 +129,21 @@ public class AccountService implements AccountInputPort {
 
   private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
     return Mono.just(request)
-            .map(req -> accountMapper.requestToDomain(req, customerId))
-            .flatMap(accountRepository::saveAccount)
-            .map(responseMapper::entityToSuccessResponse)
-            .doOnSuccess(response -> {
-              log.info("Account created successfully - ID: {}, Type: {}", response.getCodEntity(), request.getAccountType());
+          .map(req -> accountMapper.requestToDomain(req, customerId))
+          .flatMap(accountRepository::saveAccount)
+          .map(responseMapper::entityToSuccessResponse)
+          .doOnSuccess(response -> {
+            log.info("Account created successfully - ID: {}, Type: {}", response.getCodEntity(), request.getAccountType());
 
-              // 🔹 Enviar evento a Kafka
-              accountEventProducer.sendAccountCreatedEvent(
-                      response.getCodEntity(),
-                      request.getInitialBalance()
-              ).subscribe(); // si usas Mono<Void>, suscribe para dispararlo
-            });
+            // 🔹 Enviar evento con customerId
+            accountEventProducer.sendAccountCreatedEvent(
+                  response.getCodEntity(),
+                  request.getInitialBalance(),
+                  customerId
+            ).subscribe();
+          });
   }
+
 
 
   private Mono<AccountResponse> handleError(Throwable ex) {

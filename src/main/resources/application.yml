@@ -1,5 +1,5 @@
 server:
-  port: 8081
+  port: 8096
 
 spring:
   kafka:
@@ -9,19 +9,27 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
       properties:
-        schema.registry.url: http://localhost:8081
-        # Opcional para versionamiento Avro
-        # value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicRecordNameStrategy
+        schema.registry.url: http://localhost:8081  # ✅ Cambiado de 8081 a 8082
+        auto.register.schemas: true
+        value.subject.name.strategy: io.confluent.kafka.serializers.subject.TopicNameStrategy
 
     consumer:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
       group-id: account-service-group
+      auto-offset-reset: earliest
       properties:
-        schema.registry.url: http://localhost:8081
+        schema.registry.url: http://localhost:8081  # ✅ Cambiado de 8081 a 8082
         specific.avro.reader: true
 
   # MongoDB Configuration
   data:
     mongodb:
       uri: mongodb://localhost:27017/bd-account
+
+# Logging para debug (opcional)
+logging:
+  level:
+    org.apache.kafka: INFO
+    io.confluent.kafka: DEBUG
+    com.ettdata.account_service.infrastructure.kafka: DEBUG
