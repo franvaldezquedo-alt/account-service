@@ -7,6 +7,7 @@ import com.ettdata.account_service.domain.error.AccountNotFoundException;
 import com.ettdata.account_service.domain.model.Account;
 import com.ettdata.account_service.domain.model.AccountListResponse;
 import com.ettdata.account_service.domain.model.AccountResponse;
+import com.ettdata.account_service.infrastructure.kafka.AccountEventProducer;
 import com.ettdata.account_service.infrastructure.model.AccountRequest;
 import com.ettdata.account_service.infrastructure.utils.AccountConstants;
 import com.ettdata.account_service.infrastructure.utils.AccountMapper;
@@ -32,6 +33,8 @@ public class AccountService implements AccountInputPort {
   private final AccountMapper accountMapper;
   private final AccountResponseMapper responseMapper;
   private final AccountValidator validator;
+  private final AccountEventProducer accountEventProducer;
+
 
   @Override
   public Mono<AccountListResponse> findAllBankAccount() {
@@ -126,13 +129,20 @@ public class AccountService implements AccountInputPort {
 
   private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
     return Mono.just(request)
-          .map(req -> accountMapper.requestToDomain(req, customerId))
-          .flatMap(accountRepository::saveAccount)
-          .map(responseMapper::entityToSuccessResponse)
-          .doOnSuccess(response ->
-                log.info("Account created successfully - ID: {}, Type: {}",
-                      response.getCodEntity(), request.getAccountType()));
+            .map(req -> accountMapper.requestToDomain(req, customerId))
+            .flatMap(accountRepository::saveAccount)
+            .map(responseMapper::entityToSuccessResponse)
+            .doOnSuccess(response -> {
+              log.info("Account created successfully - ID: {}, Type: {}", response.getCodEntity(), request.getAccountType());
+
+              // 🔹 Enviar evento a Kafka
+              accountEventProducer.sendAccountCreatedEvent(
+                      response.getCodEntity(),
+                      request.getInitialBalance()
+              ).subscribe(); // si usas Mono<Void>, suscribe para dispararlo
+            });
   }
+
 
   private Mono<AccountResponse> handleError(Throwable ex) {
     log.error("Unexpected error in account operation: {}", ex.getMessage(), ex);

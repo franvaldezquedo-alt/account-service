@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "name": "AccountValidationRequest",
+  "namespace": "com.ettdata.avro",
+  "fields": [
+    {"name": "transactionId", "type": "string"},
+    {"name": "accountNumber", "type": "string"},
+    {"name": "customerId", "type": "string"},
+    {"name": "accountType", "type": "string"},
+    {"name": "amount", "type": ["null", "double"], "default": null},
+    {"name": "balance", "type": ["null", "double"], "default": null},
+    {"name": "minimumOpeningAmount", "type": ["null", "double"], "default": null},
+    {"name": "transactionType", "type": "string"}
+  ]
+}
