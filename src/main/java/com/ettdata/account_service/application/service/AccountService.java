@@ -7,7 +7,6 @@ import com.ettdata.account_service.domain.error.AccountNotFoundException;
 import com.ettdata.account_service.domain.model.Account;
 import com.ettdata.account_service.domain.model.AccountListResponse;
 import com.ettdata.account_service.domain.model.AccountResponse;
-import com.ettdata.account_service.infrastructure.kafka.AccountEventProducer;
 import com.ettdata.account_service.infrastructure.model.AccountRequest;
 import com.ettdata.account_service.infrastructure.utils.AccountConstants;
 import com.ettdata.account_service.infrastructure.utils.AccountMapper;
@@ -33,7 +32,6 @@ public class AccountService implements AccountInputPort {
   private final AccountMapper accountMapper;
   private final AccountResponseMapper responseMapper;
   private final AccountValidator validator;
-  private final AccountEventProducer accountEventProducer;
 
 
   @Override
@@ -144,7 +142,7 @@ public class AccountService implements AccountInputPort {
   }
 
   private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
-    return Mono.just(request)
+    /*return Mono.just(request)
           .map(req -> accountMapper.requestToDomain(req, customerId))
           .flatMap(accountRepository::saveOrUpdateAccount)
           .map(responseMapper::entityToSuccessResponse)
@@ -157,7 +155,8 @@ public class AccountService implements AccountInputPort {
                   request.getInitialBalance(),
                   customerId
             ).subscribe();
-          });
+          });*/
+      return null;
   }
 
 
