@@ -29,7 +29,6 @@ public class AccountService implements AccountInputPort {
 
   private final AccountRepositoryOutputPort accountRepository;
   private final CustomerOutputPort customerClient;
-  private final AccountMapper accountMapper;
   private final AccountResponseMapper responseMapper;
   private final AccountValidator validator;
 

@@ -11,4 +11,14 @@ public interface TransactionValidationInput {
      * @return respuesta de validación
      */
     Mono<AccountValidationResponse> retiro(AccountValidationRequest request);
+
+    /**
+     * Valida y procesa una solicitud de depósito
+     */
+    Mono<AccountValidationResponse> deposito(AccountValidationRequest request);
+
+    /**
+     * Valida y procesa una solicitud de transferencia (validación de cuenta origen)
+     */
+    Mono<AccountValidationResponse> transferencia(AccountValidationRequest request);
 }

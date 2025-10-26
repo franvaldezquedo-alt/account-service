@@ -23,6 +23,12 @@
       "type": ["null", "double"],
       "default": null,
       "doc": "Monto que se desea retirar"
+    },
+    {
+      "name": "targetAccountNumber",
+      "type": ["null", "string"],
+      "default": null,
+      "doc": "Numero de cuenta destino en caso de transferencia"
     }
   ]
 }

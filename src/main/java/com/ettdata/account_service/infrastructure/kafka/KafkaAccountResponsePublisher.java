@@ -1,12 +1,10 @@
 package com.ettdata.account_service.infrastructure.kafka;
 
 import com.ettdata.account_service.application.port.out.AccountResponseOutputPort;
-import com.ettdata.account_service.application.service.AccountValidationService;
 import com.ettdata.account_service.infrastructure.config.KafkaTopicProperties;
 import com.ettdata.avro.AccountValidationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;

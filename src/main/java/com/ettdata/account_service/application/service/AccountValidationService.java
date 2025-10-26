@@ -32,6 +32,37 @@ public class AccountValidationService implements TransactionValidationInput {
                 .onErrorResume(error -> buildErrorResponse(request, error));
     }
 
+    @Override
+    public Mono<AccountValidationResponse> deposito(AccountValidationRequest request) {
+        log.info("🔄 Procesando validación de depósito para transactionId={}", request.getTransactionId());
+
+        return validateRequest(request)
+                .flatMap(validRequest ->
+                        accountRepository.findByNumberAccount(String.valueOf(validRequest.getAccountNumber()))
+                                .flatMap(account -> processDeposit(validRequest, account))
+                                .switchIfEmpty(buildAccountNotFoundResponse(validRequest))
+                )
+                .onErrorResume(error -> buildErrorResponse(request, error));
+    }
+
+    @Override
+    public Mono<AccountValidationResponse> transferencia(AccountValidationRequest request) {
+        log.info("🔄 Procesando validación de transferencia para transactionId={}", request.getTransactionId());
+
+        // Validar que exista cuenta destino en la solicitud
+        if (request.getTargetAccountNumber() == null || request.getTargetAccountNumber().isBlank()) {
+            return Mono.just(buildTargetMissingResponse(request));
+        }
+
+        return validateRequest(request)
+                .flatMap(validRequest ->
+                        accountRepository.findByNumberAccount(String.valueOf(validRequest.getAccountNumber()))
+                                .flatMap(account -> validateAndProcessTransfer(validRequest, account))
+                                .switchIfEmpty(buildAccountNotFoundResponse(validRequest))
+                )
+                .onErrorResume(error -> buildErrorResponse(request, error));
+    }
+
     private Mono<AccountValidationRequest> validateRequest(AccountValidationRequest request) {
         if (request.getAmount() <= 0) {
             return Mono.error(new IllegalArgumentException("El monto debe ser mayor a cero"));
@@ -62,9 +93,33 @@ public class AccountValidationService implements TransactionValidationInput {
         return processWithdraw(request, account, requestAmount);
     }
 
-    private boolean hasInsufficientFunds(Account account, BigDecimal amount) {
-        return account.getBalance().compareTo(amount) < 0;
+    private Mono<AccountValidationResponse> validateAndProcessTransfer(
+            AccountValidationRequest request,
+            Account sourceAccount) {
+
+        BigDecimal requestAmount = BigDecimal.valueOf(request.getAmount());
+
+        if (hasInsufficientFunds(sourceAccount, requestAmount)) {
+            return Mono.just(buildInsufficientFundsResponse(request));
+        }
+
+        // Buscar cuenta destino
+        return accountRepository.findByNumberAccount(request.getTargetAccountNumber().toString())
+                .flatMap(targetAccount -> {
+                    // Actualizar saldos
+                    sourceAccount.setBalance(sourceAccount.getBalance().subtract(requestAmount));
+                    sourceAccount.setCantMovements(sourceAccount.getCantMovements()+1);
+                    targetAccount.setBalance(targetAccount.getBalance().add(requestAmount));
+                    targetAccount.setCantMovements(targetAccount.getCantMovements() + 1);
+
+                    // Guardar ambas cuentas
+                    return accountRepository.saveOrUpdateAccount(sourceAccount)
+                            .then(accountRepository.saveOrUpdateAccount(targetAccount))
+                            .thenReturn(buildTransferSuccessResponse(request));
+                })
+                .switchIfEmpty(Mono.just(buildTargetMissingResponse(request)));
     }
+
 
     private Mono<AccountValidationResponse> processWithdraw(
             AccountValidationRequest request,
@@ -72,23 +127,62 @@ public class AccountValidationService implements TransactionValidationInput {
             BigDecimal amount) {
 
         account.setBalance(account.getBalance().subtract(amount));
+        account.setCantMovements(account.getCantMovements() + 1);
 
         return accountRepository.saveOrUpdateAccount(account)
                 .map(updated -> {
                     log.info("✅ Retiro aplicado correctamente: cuenta={}, nuevo saldo={}",
                             updated.getAccountNumber(), updated.getBalance());
-                    return buildSuccessResponse(request);
+                    return buildWithdrawSuccessResponse(request);
                 });
+    }
+
+    private Mono<AccountValidationResponse> processDeposit(
+            AccountValidationRequest request,
+            Account account) {
+
+        BigDecimal amount = BigDecimal.valueOf(request.getAmount());
+        account.setBalance(account.getBalance().add(amount));
+        account.setCantMovements(account.getCantMovements() + 1);
+
+        return accountRepository.saveOrUpdateAccount(account)
+                .map(updated -> {
+                    log.info("✅ Depósito aplicado correctamente: cuenta={}, nuevo saldo={}",
+                            updated.getAccountNumber(), updated.getBalance());
+                    return buildDepositSuccessResponse(request);
+                });
+    }
+
+    private boolean hasInsufficientFunds(Account account, BigDecimal amount) {
+        return account.getBalance().compareTo(amount) < 0;
     }
 
     // ========== Response Builders ==========
 
-    private AccountValidationResponse buildSuccessResponse(AccountValidationRequest request) {
+    private AccountValidationResponse buildWithdrawSuccessResponse(AccountValidationRequest request) {
         return AccountValidationResponse.newBuilder()
                 .setTransactionId(request.getTransactionId())
                 .setAccountNumber(request.getAccountNumber())
                 .setCodResponse(200)
                 .setMessageResponse("Retiro registrado correctamente")
+                .build();
+    }
+
+    private AccountValidationResponse buildDepositSuccessResponse(AccountValidationRequest request) {
+        return AccountValidationResponse.newBuilder()
+                .setTransactionId(request.getTransactionId())
+                .setAccountNumber(request.getAccountNumber())
+                .setCodResponse(200)
+                .setMessageResponse("Depósito registrado correctamente")
+                .build();
+    }
+
+    private AccountValidationResponse buildTransferSuccessResponse(AccountValidationRequest request) {
+        return AccountValidationResponse.newBuilder()
+                .setTransactionId(request.getTransactionId())
+                .setAccountNumber(request.getAccountNumber())
+                .setCodResponse(200)
+                .setMessageResponse("Transferencia registrada correctamente")
                 .build();
     }
 
@@ -116,7 +210,7 @@ public class AccountValidationService implements TransactionValidationInput {
             AccountValidationRequest request,
             Throwable error) {
 
-        log.error("💥 Error procesando retiro: {}", error.getMessage(), error);
+        log.error("💥 Error procesando transacción: {}", error.getMessage(), error);
 
         return Mono.just(AccountValidationResponse.newBuilder()
                 .setTransactionId(request.getTransactionId())
@@ -124,5 +218,14 @@ public class AccountValidationService implements TransactionValidationInput {
                 .setCodResponse(500)
                 .setMessageResponse("Error interno del servidor")
                 .build());
+    }
+
+    private AccountValidationResponse buildTargetMissingResponse(AccountValidationRequest request) {
+        return AccountValidationResponse.newBuilder()
+                .setTransactionId(request.getTransactionId())
+                .setAccountNumber(request.getAccountNumber())
+                .setCodResponse(400)
+                .setMessageResponse("Cuenta destino inválida")
+                .build();
     }
 }
