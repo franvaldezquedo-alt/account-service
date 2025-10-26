@@ -40,7 +40,7 @@ public class AccountService implements AccountInputPort {
   public Mono<AccountListResponse> findAllBankAccount() {
     log.info("Retrieving all bank accounts");
 
-    return accountRepository.findAllBankAccount()
+    return accountRepository.findAllAccount()
           .collectList()
           .map(responseMapper::toAccountListResponse)
           .doOnSuccess(response ->
@@ -50,10 +50,10 @@ public class AccountService implements AccountInputPort {
   }
 
   @Override
-  public Mono<AccountListResponse> findByIdBankAccount(String id) {
+  public Mono<AccountListResponse> findByIdAccount(String id) {
     log.info("Retrieving account by id: {}", id);
 
-    return accountRepository.findByIdBankAccount(id)
+    return accountRepository.findByIdAccount(id)
           .map(responseMapper::entityToSingletonResponse)
           .switchIfEmpty(Mono.defer(() -> {
             log.warn("Account not found with id: {}", id);
@@ -90,10 +90,10 @@ public class AccountService implements AccountInputPort {
   }
 
   @Override
-  public Mono<AccountResponse> deleteByIdBankAccount(String id) {
+  public Mono<AccountResponse> deleteByIdAccount(String id) {
     log.info("Deleting account with id: {}", id);
 
-    return accountRepository.deleteByIdBankAccount(id)
+    return accountRepository.deleteByIdAccount(id)
           .then(Mono.fromCallable(() -> responseMapper.toDeleteResponse(id)))
           .doOnSuccess(response ->
                 log.info("Account deleted successfully with id: {}", id))
@@ -101,7 +101,23 @@ public class AccountService implements AccountInputPort {
                 log.error("Error deleting account {}: {}", id, error.getMessage()));
   }
 
-  // ===== Private Helper Methods =====
+    @Override
+    public Mono<AccountListResponse> findByNumberAccount(String numberAccount) {
+        log.info("Retrieving account by numero: {}", numberAccount);
+
+        return accountRepository.findByIdAccount(numberAccount)
+                .map(responseMapper::entityToSingletonResponse)
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Account not found with numero: {}", numberAccount);
+                    return Mono.error(new AccountNotFoundException(
+                            AccountConstants.BANK_ACCOUNT_NOT_FOUND + numberAccount));
+                }))
+                .doOnSuccess(response -> log.debug("Account found with numero: {}", numberAccount))
+                .doOnError(error ->
+                        log.error("Error retrieving account numero {}: {}", numberAccount, error.getMessage()));
+    }
+
+    // ===== Private Helper Methods =====
 
   private Mono<Void> validateAccountCreation(AccountRequest request, String customerType) {
     return validator.validateMinimumBalance(
@@ -130,7 +146,7 @@ public class AccountService implements AccountInputPort {
   private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
     return Mono.just(request)
           .map(req -> accountMapper.requestToDomain(req, customerId))
-          .flatMap(accountRepository::saveAccount)
+          .flatMap(accountRepository::saveOrUpdateAccount)
           .map(responseMapper::entityToSuccessResponse)
           .doOnSuccess(response -> {
             log.info("Account created successfully - ID: {}, Type: {}", response.getCodEntity(), request.getAccountType());

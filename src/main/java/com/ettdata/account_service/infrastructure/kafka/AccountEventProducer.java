@@ -43,15 +43,11 @@ public class AccountEventProducer {
 
               // Construir el request
               AccountValidationRequest request = AccountValidationRequest.newBuilder()
-                    .setTransactionId(UUID.randomUUID().toString())
-                    .setAccountNumber(accountNumber)
-                    .setCustomerId(customerId)
-                    .setAccountType("SAVINGS")
-                    .setAmount(initialAmount != null ? initialAmount.doubleValue() : null)
-                    .setBalance(null)
-                    .setMinimumOpeningAmount(null)
-                    .setTransactionType("ACCOUNT_CREATED")
-                    .build();
+                      .setTransactionId(UUID.randomUUID().toString())
+                      .setAccountNumber(accountNumber)
+                      .setTransactionType("WITHDRAWAL")
+                      .setAmount(initialAmount != null ? initialAmount.doubleValue() : null)
+                      .build();
 
               log.info("📦 Request Avro construido: transactionId={}, account={}",
                     request.getTransactionId(), request.getAccountNumber());

@@ -8,6 +8,7 @@ import reactor.core.publisher.Mono;
 public interface AccountInputPort {
     Mono<AccountListResponse> findAllBankAccount();
     Mono<AccountResponse> createBankAccount(AccountRequest bankAccountRequest);
-    Mono<AccountListResponse> findByIdBankAccount(String id);
-    Mono<AccountResponse> deleteByIdBankAccount(String id);
+    Mono<AccountListResponse> findByIdAccount(String id);
+    Mono<AccountResponse> deleteByIdAccount(String id);
+    Mono<AccountListResponse> findByNumberAccount(String numberAccount);
 }

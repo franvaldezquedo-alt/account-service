@@ -23,20 +23,20 @@ public class AccountAdapter implements AccountRepositoryOutputPort {
     }
 
     @Override
-    public Flux<Account> findAllBankAccount() {
+    public Flux<Account> findAllAccount() {
         return accountRepository.findAll()
               .map(accountMapper::toDomain);
     }
 
     @Override
-    public Mono<Account> saveAccount(Account account) {
+    public Mono<Account> saveOrUpdateAccount(Account account) {
       AccountEntity entity = accountMapper.toEntity(account);
       return accountRepository.save(entity)
             .map(accountMapper::toDomain);
     }
 
     @Override
-    public Mono<Account> findByIdBankAccount(String id) {
+    public Mono<Account> findByIdAccount(String id) {
       return accountRepository.findByAccountNumber(id)
             .map(accountMapper::toDomain);
     }
@@ -50,7 +50,14 @@ public class AccountAdapter implements AccountRepositoryOutputPort {
     }
 
     @Override
-    public Mono<Void> deleteByIdBankAccount(String id) {
+    public Mono<Void> deleteByIdAccount(String id) {
       return accountRepository.deleteById(id);
     }
+
+    @Override
+    public Mono<Account> findByNumberAccount(String numberAccount) {
+        return accountRepository.findByAccountNumber(numberAccount)
+                .map(accountMapper::toDomain);
+    }
+
 }

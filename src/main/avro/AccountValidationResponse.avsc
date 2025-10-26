@@ -3,9 +3,25 @@
   "name": "AccountValidationResponse",
   "namespace": "com.ettdata.avro",
   "fields": [
-    {"name": "transactionId", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "accountNumber", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "isValid", "type": "boolean"},
-    {"name": "reason", "type": ["null", {"type": "string", "avro.java.string": "String"}], "default": null}
+    {
+      "name": "transactionId",
+      "type": "string",
+      "doc": "Identificador único de la transacción"
+    },
+    {
+      "name": "accountNumber",
+      "type": "string",
+      "doc": "Número de cuenta asociado a la transacción"
+    },
+    {
+      "name": "codResponse",
+      "type": "int",
+      "doc": "Código de respuesta: 200=éxito, 400=error"
+    },
+    {
+      "name": "messageResponse",
+      "type": "string",
+      "doc": "Mensaje explicativo del resultado de la transacción"
+    }
   ]
 }

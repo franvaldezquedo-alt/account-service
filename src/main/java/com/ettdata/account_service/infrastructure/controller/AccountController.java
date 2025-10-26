@@ -28,13 +28,13 @@ public class AccountController {
 
     @GetMapping("/{id}")
     Mono<AccountListResponse> getBankAccountById(@PathVariable String id) {
-        return accountInputPort.findByIdBankAccount(id)
+        return accountInputPort.findByIdAccount(id)
                 .doOnSuccess(res -> log.info("Respuesta cuenta bancaria por ID: {}", res));
     }
 
     @GetMapping("/account/{numberAccount}")
     Mono<AccountListResponse> getBankAccountByNumberAccount(@PathVariable String numberAccount) {
-        return accountInputPort.findByIdBankAccount(numberAccount)
+        return accountInputPort.findByIdAccount(numberAccount)
                 .doOnSuccess(res -> log.info("Respuesta cuenta bancaria por número de cuenta: {}", res));
     }
 
@@ -47,7 +47,7 @@ public class AccountController {
 
     @DeleteMapping("/delete/{id}")
     Mono<AccountResponse> deleteBankAccount(@PathVariable String id) {
-        return accountInputPort.deleteByIdBankAccount(id);
+        return accountInputPort.deleteByIdAccount(id);
     }
 
 }

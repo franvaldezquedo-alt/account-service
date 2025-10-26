@@ -6,9 +6,15 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface AccountRepositoryOutputPort {
-    Flux<Account> findAllBankAccount();
-    Mono<Account> saveAccount(Account account);
-    Mono<Account> findByIdBankAccount(String id);
+    Flux<Account> findAllAccount();
+
+    Mono<Account> saveOrUpdateAccount(Account account);
+
+    Mono<Account> findByIdAccount(String id);
+
     Flux<Account> findByCustomerId(String customerId);
-    Mono<Void> deleteByIdBankAccount(String id);
+
+    Mono<Void> deleteByIdAccount(String id);
+
+    Mono<Account> findByNumberAccount(String numberAccount);
 }

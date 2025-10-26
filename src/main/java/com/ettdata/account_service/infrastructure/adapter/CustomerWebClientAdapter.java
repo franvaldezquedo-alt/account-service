@@ -25,7 +25,7 @@ public class CustomerWebClientAdapter implements CustomerOutputPort {
      * Constructor con URL configurable desde properties.
      * @param customerServiceUrl URL base del servicio de clientes
      */
-    public CustomerWebClientAdapter(@Value("${customer.service.url:http://localhost:8080}") String customerServiceUrl) {
+    public CustomerWebClientAdapter(@Value("${customer.service.url:http://localhost:8090}") String customerServiceUrl) {
         this.webClient = WebClient.builder()
                 .baseUrl(customerServiceUrl)
                 .build();

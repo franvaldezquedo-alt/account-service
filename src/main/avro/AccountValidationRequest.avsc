@@ -3,13 +3,26 @@
   "name": "AccountValidationRequest",
   "namespace": "com.ettdata.avro",
   "fields": [
-    {"name": "transactionId", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "accountNumber", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "customerId", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "accountType", "type": {"type": "string", "avro.java.string": "String"}},
-    {"name": "amount", "type": ["null", "double"], "default": null},
-    {"name": "balance", "type": ["null", "double"], "default": null},
-    {"name": "minimumOpeningAmount", "type": ["null", "double"], "default": null},
-    {"name": "transactionType", "type": {"type": "string", "avro.java.string": "String"}}
+    {
+      "name": "transactionId",
+      "type": "string",
+      "doc": "Identificador único de la transacción"
+    },
+    {
+      "name": "accountNumber",
+      "type": "string",
+      "doc": "Número de cuenta desde la cual se quiere retirar dinero"
+    },
+    {
+      "name": "transactionType",
+      "type": "string",
+      "doc": "Tipo de transacción: RETIRO, DEPOSITO, etc."
+    },
+    {
+      "name": "amount",
+      "type": ["null", "double"],
+      "default": null,
+      "doc": "Monto que se desea retirar"
+    }
   ]
 }
