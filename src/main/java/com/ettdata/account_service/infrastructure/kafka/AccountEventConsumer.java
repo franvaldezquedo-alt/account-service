@@ -3,6 +3,7 @@ package com.ettdata.account_service.infrastructure.kafka;
 import com.ettdata.account_service.application.port.in.TransactionValidationInput;
 import com.ettdata.account_service.application.port.out.AccountResponseOutputPort;
 import com.ettdata.avro.AccountValidationRequest;
+import com.ettdata.avro.AccountValidationResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -30,7 +31,7 @@ public class AccountEventConsumer {
                 transactionId, request.getAccountNumber(), request.getAmount(), request.getTransactionType());
 
         // Seleccionar el flujo de validación según el tipo de transacción
-        Mono<com.ettdata.avro.AccountValidationResponse> validationFlow;
+        Mono<AccountValidationResponse> validationFlow;
 
         String transactionType = request.getTransactionType() == null ? "" : request.getTransactionType().toUpperCase();
 

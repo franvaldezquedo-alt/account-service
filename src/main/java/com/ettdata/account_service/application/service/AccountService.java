@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+
 import java.util.List;
 
 /**
@@ -31,7 +32,11 @@ public class AccountService implements AccountInputPort {
   private final CustomerOutputPort customerClient;
   private final AccountResponseMapper responseMapper;
   private final AccountValidator validator;
+  private final AccountMapper accountMapper;
 
+  // ============================================================
+  // ✅ Consultas
+  // ============================================================
 
   @Override
   public Mono<AccountListResponse> findAllBankAccount() {
@@ -63,7 +68,28 @@ public class AccountService implements AccountInputPort {
   }
 
   @Override
-  public Mono<AccountResponse> createBankAccount(AccountRequest request) {
+  public Mono<AccountListResponse> findByNumberAccount(String numberAccount) {
+    log.info("Retrieving account by number: {}", numberAccount);
+
+    return accountRepository.findByIdAccount(numberAccount)
+          .map(responseMapper::entityToSingletonResponse)
+          .switchIfEmpty(Mono.defer(() -> {
+            log.warn("Account not found with number: {}", numberAccount);
+            return Mono.error(new AccountNotFoundException(
+                  AccountConstants.BANK_ACCOUNT_NOT_FOUND + numberAccount));
+          }))
+          .doOnSuccess(response ->
+                log.debug("Account found with number: {}", numberAccount))
+          .doOnError(error ->
+                log.error("Error retrieving account number {}: {}", numberAccount, error.getMessage()));
+  }
+
+  // ============================================================
+  // ✅ Creación de cuenta
+  // ============================================================
+
+  @Override
+  public Mono<AccountResponse> createAccount(AccountRequest request) {
     log.info("Starting account creation for document: {}", request.getCustomerDocument());
 
     return customerClient.getCustomerByDocument(request.getCustomerDocument())
@@ -86,36 +112,9 @@ public class AccountService implements AccountInputPort {
           .onErrorResume(this::handleError);
   }
 
-  @Override
-  public Mono<AccountResponse> deleteByIdAccount(String id) {
-    log.info("Deleting account with id: {}", id);
-
-    return accountRepository.deleteByIdAccount(id)
-          .then(Mono.fromCallable(() -> responseMapper.toDeleteResponse(id)))
-          .doOnSuccess(response ->
-                log.info("Account deleted successfully with id: {}", id))
-          .doOnError(error ->
-                log.error("Error deleting account {}: {}", id, error.getMessage()));
-  }
-
-    @Override
-    public Mono<AccountListResponse> findByNumberAccount(String numberAccount) {
-        log.info("Retrieving account by numero: {}", numberAccount);
-
-        return accountRepository.findByIdAccount(numberAccount)
-                .map(responseMapper::entityToSingletonResponse)
-                .switchIfEmpty(Mono.defer(() -> {
-                    log.warn("Account not found with numero: {}", numberAccount);
-                    return Mono.error(new AccountNotFoundException(
-                            AccountConstants.BANK_ACCOUNT_NOT_FOUND + numberAccount));
-                }))
-                .doOnSuccess(response -> log.debug("Account found with numero: {}", numberAccount))
-                .doOnError(error ->
-                        log.error("Error retrieving account numero {}: {}", numberAccount, error.getMessage()));
-    }
-
-    // ===== Private Helper Methods =====
-
+  /**
+   * Ejecuta las validaciones de creación de cuenta.
+   */
   private Mono<Void> validateAccountCreation(AccountRequest request, String customerType) {
     return validator.validateMinimumBalance(
                 request.getInitialBalance(),
@@ -125,6 +124,9 @@ public class AccountService implements AccountInputPort {
                 request.getAccountType()));
   }
 
+  /**
+   * Procesa la creación de cuenta aplicando validaciones adicionales según tipo de cliente.
+   */
   private Mono<AccountResponse> processAccountCreation(AccountRequest request,
                                                        String customerId,
                                                        String customerType,
@@ -140,25 +142,38 @@ public class AccountService implements AccountInputPort {
           }));
   }
 
+  /**
+   * Crea y guarda la cuenta bancaria.
+   */
   private Mono<AccountResponse> createAndSaveAccount(AccountRequest request, String customerId) {
-    /*return Mono.just(request)
+    return Mono.just(request)
           .map(req -> accountMapper.requestToDomain(req, customerId))
           .flatMap(accountRepository::saveOrUpdateAccount)
           .map(responseMapper::entityToSuccessResponse)
-          .doOnSuccess(response -> {
-            log.info("Account created successfully - ID: {}, Type: {}", response.getCodEntity(), request.getAccountType());
-
-            // 🔹 Enviar evento con customerId
-            accountEventProducer.sendAccountCreatedEvent(
-                  response.getCodEntity(),
-                  request.getInitialBalance(),
-                  customerId
-            ).subscribe();
-          });*/
-      return null;
+          .doOnSuccess(response ->
+                log.info("Account created successfully - ID: {}, Type: {}",
+                      response.getCodEntity(), request.getAccountType()));
   }
 
+  // ============================================================
+  // ✅ Eliminación de cuenta
+  // ============================================================
 
+  @Override
+  public Mono<AccountResponse> deleteByIdAccount(String id) {
+    log.info("Deleting account with id: {}", id);
+
+    return accountRepository.deleteByIdAccount(id)
+          .then(Mono.fromCallable(() -> responseMapper.toDeleteResponse(id)))
+          .doOnSuccess(response ->
+                log.info("Account deleted successfully with id: {}", id))
+          .doOnError(error ->
+                log.error("Error deleting account {}: {}", id, error.getMessage()));
+  }
+
+  // ============================================================
+  // ⚠️ Manejo de errores
+  // ============================================================
 
   private Mono<AccountResponse> handleError(Throwable ex) {
     log.error("Unexpected error in account operation: {}", ex.getMessage(), ex);
